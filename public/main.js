@@ -51,8 +51,8 @@ const library = [
   },
 ];
 
-const connection = new BareMux.BareMuxConnection("/lib/transport-worker.js");
-const config = window.__ARXX_CONFIG__ || { bareServers: [], wispUrl: null };
+const connection = new FrameCore.FrameCoreConnection("/lib/transport-worker.js");
+const config = window.__ARXX_CONFIG__ || { bareServers: [], wsUrl: null };
 
 let transportPromise = null;
 
@@ -64,12 +64,12 @@ async function getTransport() {
       hasBackend = await fetch("/__backend__", { cache: "no-store" }).then((r) => r.ok);
     } catch (e) {}
     if (hasBackend) {
-      const wispUrl =
+      const wsUrl =
         (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
-      return { path: "/lib/epoxy.mjs", args: [{ wisp: wispUrl }] };
+      return { path: "/epoxy/index.mjs", args: [{ wisp: wsUrl }] };
     }
-    if (config.wispUrl) {
-      return { path: "/lib/epoxy.mjs", args: [{ wisp: config.wispUrl }] };
+    if (config.wsUrl) {
+      return { path: "/epoxy/index.mjs", args: [{ wisp: config.wsUrl }] };
     }
     const bare = config.bareServers.length ? config.bareServers[0] : "/bare/";
     return { path: "/lib/remote-client.mjs", args: [bare] };
@@ -86,7 +86,7 @@ async function ensureTransport() {
 
 const homeView = document.getElementById("home-view");
 const browserView = document.getElementById("browser-view");
-const frame = document.getElementById("uv-frame");
+const frame = document.getElementById("frame");
 const homeAddress = document.getElementById("hero-address");
 const navAddress = document.getElementById("nav-address");
 const browserAddress = document.getElementById("browser-address-input");
@@ -132,7 +132,7 @@ async function openBrowser(rawInput, engineTemplate) {
   await ensureTransport();
 
   lastUrl = url;
-  frame.src = __uv$config.prefix + __uv$config.encodeUrl(url);
+    frame.src = __site$config.prefix + __site$config.encodeUrl(url);
   browserAddress.value = url;
 
   homeView.classList.add("hidden");

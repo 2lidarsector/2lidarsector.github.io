@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import express from "express";
 import { createBareServer } from "@tomphttp/bare-server-node";
 import { server as wisp } from "@mercuryworkshop/wisp-js/server";
+import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
 
 const publicPath = join(process.cwd(), "public");
 
@@ -17,6 +18,8 @@ app.get("/__backend__", (req, res) => {
 
 // Load our publicPath first and prioritize it over UV.
 app.use(express.static(publicPath));
+// Epoxy transport is backend-only (served from node_modules, never on Pages).
+app.use("/epoxy/", express.static(epoxyPath));
 
 // Error for everything else
 app.use((req, res) => {

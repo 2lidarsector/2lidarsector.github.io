@@ -1,5 +1,5 @@
-// The user likely has overwritten all networking functions after importing bare-client
-// It is our responsibility to make sure components of Bare-Client are using native networking functions
+﻿// The user likely has overwritten all networking functions after importing bare-client
+// It is our responsibility to make sure components of Data-Client are using native networking functions
 // These exports are provided to plugins by @rollup/plugin-inject
 const fetch = globalThis.fetch;
 const WebSocket = globalThis.WebSocket;
@@ -13,7 +13,7 @@ const WebSocketFields = {
     OPEN: WebSocket.OPEN,
 };
 
-class BareError extends Error {
+class DataError extends Error {
     status;
     body;
     constructor(status, body) {
@@ -27,7 +27,7 @@ class Client {
     /**
      *
      * @param version Version provided by extension
-     * @param server Bare Server URL provided by BareClient
+     * @param server Data Server URL provided by DataClient
      */
     constructor(version, server) {
         this.base = new URL(`./v${version}/`, server);
@@ -380,7 +380,7 @@ function joinHeaders(headers) {
                 continue;
             }
             if (!value.startsWith(";")) {
-                throw new BareError(400, {
+                throw new DataError(400, {
                     code: "INVALID_BARE_HEADER",
                     id: `request.headers.${header}`,
                     message: "Value didn't begin with semi-colon.",
@@ -481,7 +481,7 @@ class ClientV3 extends Client {
             headers.host = remote.host;
         else
             headers.Host = remote.host;
-        options.headers = this.createBareHeaders(remote, headers);
+        options.headers = this.createDataHeaders(remote, headers);
         const response = await fetch(this.http + "?cache=" + md5(remote.toString()), options);
         const readResponse = await this.readBareResponse(response);
         return {
@@ -493,7 +493,7 @@ class ClientV3 extends Client {
     }
     async readBareResponse(response) {
         if (!response.ok) {
-            throw new BareError(response.status, await response.json());
+            throw new DataError(response.status, await response.json());
         }
         const responseHeaders = joinHeaders(response.headers);
         const result = {};
@@ -503,12 +503,12 @@ class ClientV3 extends Client {
         const xBareStatusText = responseHeaders.get("x-bare-status-text");
         if (xBareStatusText !== null)
             result.statusText = xBareStatusText;
-        const xBareHeaders = responseHeaders.get("x-bare-headers");
-        if (xBareHeaders !== null)
-            result.headers = JSON.parse(xBareHeaders);
+        const xDataHeaders = responseHeaders.get("x-bare-headers");
+        if (xDataHeaders !== null)
+            result.headers = JSON.parse(xDataHeaders);
         return result;
     }
-    createBareHeaders(remote, bareHeaders, forwardHeaders = [], passHeaders = [], passStatus = []) {
+    createDataHeaders(remote, bareHeaders, forwardHeaders = [], passHeaders = [], passStatus = []) {
         const headers = new Headers();
         headers.set("x-bare-url", remote.toString());
         headers.set("x-bare-headers", JSON.stringify(bareHeaders));
@@ -526,5 +526,4 @@ class ClientV3 extends Client {
     }
 }
 
-export { ClientV3 as BareClient, ClientV3 as default };
-//# sourceMappingURL=index.mjs.map
+export { ClientV3 as DataClient, ClientV3 as default };

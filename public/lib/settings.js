@@ -1,7 +1,7 @@
-self.__uv$config = {
+self.__site$config = {
   prefix: "/go/",
-  encodeUrl: Ultraviolet.codec.xor.encode,
-  decodeUrl: Ultraviolet.codec.xor.decode,
+  encodeUrl: Arcadia.codec.xor.encode,
+  decodeUrl: Arcadia.codec.xor.decode,
   handler: "/lib/handler.js",
   client: "/lib/client.js",
   bundle: "/lib/core.js",
