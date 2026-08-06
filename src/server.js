@@ -5,10 +5,6 @@ import express from "express";
 import { createBareServer } from "@tomphttp/bare-server-node";
 import { server as wisp } from "@mercuryworkshop/wisp-js/server";
 
-import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
-import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
-import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
-
 const publicPath = join(process.cwd(), "public");
 
 const app = express();
@@ -21,11 +17,6 @@ app.get("/__backend__", (req, res) => {
 
 // Load our publicPath first and prioritize it over UV.
 app.use(express.static(publicPath));
-// Load vendor files last.
-// The vendor's uv.config.js won't conflict with our uv.config.js inside the publicPath directory.
-app.use("/uv/", express.static(uvPath));
-app.use("/epoxy/", express.static(epoxyPath));
-app.use("/baremux/", express.static(baremuxPath));
 
 // Error for everything else
 app.use((req, res) => {

@@ -51,7 +51,7 @@ const library = [
   },
 ];
 
-const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
+const connection = new BareMux.BareMuxConnection("/lib/transport-worker.js");
 const config = window.__ARXX_CONFIG__ || { bareServers: [], wispUrl: null };
 
 let transportPromise = null;
@@ -66,13 +66,13 @@ async function getTransport() {
     if (hasBackend) {
       const wispUrl =
         (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
-      return { path: "/epoxy/index.mjs", args: [{ wisp: wispUrl }] };
+      return { path: "/lib/epoxy.mjs", args: [{ wisp: wispUrl }] };
     }
     if (config.wispUrl) {
-      return { path: "/epoxy/index.mjs", args: [{ wisp: config.wispUrl }] };
+      return { path: "/lib/epoxy.mjs", args: [{ wisp: config.wispUrl }] };
     }
     const bare = config.bareServers.length ? config.bareServers[0] : "/bare/";
-    return { path: "/bareasmodule3/index.mjs", args: [bare] };
+    return { path: "/lib/remote-client.mjs", args: [bare] };
   })();
   return transportPromise;
 }
