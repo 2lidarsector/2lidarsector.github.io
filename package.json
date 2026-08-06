@@ -1,7 +1,7 @@
 {
-  "name": "unblocked-games",
+  "name": "arcadex",
   "version": "1.0.0",
-  "description": "Unblocked games portal with Ultraviolet proxy browser",
+  "description": "Ultraviolet web proxy with app library",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
