@@ -124,7 +124,7 @@ function renderLibrary() {
   grid.innerHTML = library
     .map(
       (g) => `
-    <a class="app-card" href="${g.path}" target="_blank" rel="noopener">
+    <a class="app-card" href="${g.path}">
       <div class="app-thumb" style="background: linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})">
         ${g.icon}
       </div>
@@ -231,12 +231,40 @@ document.querySelectorAll(".quick-links a").forEach((a) => {
 
 renderLibrary();
 
+const PRELOAD_URL = "https://meow.slqnt.dev/";
+const preloadFrame = document.createElement("iframe");
+preloadFrame.style.cssText = "position:fixed;left:-9999px;top:0;width:1024px;height:640px;border:0;visibility:hidden;";
+preloadFrame.title = "Preload";
+document.body.appendChild(preloadFrame);
+
+async function preloadGame() {
+  try {
+    await registerSW();
+    await ensureTransport();
+    preloadFrame.src = __site$config.prefix + __site$config.encodeUrl(PRELOAD_URL);
+  } catch (e) {}
+}
+preloadGame();
+
 document.getElementById("library-grid").addEventListener("click", (e) => {
   const card = e.target.closest("a.app-card");
   if (!card) return;
   const href = card.getAttribute("href");
-  if (href && /^https?:\/\//.test(href)) {
-    e.preventDefault();
+  if (!href) return;
+  e.preventDefault();
+  if (href === PRELOAD_URL && preloadFrame.src) {
+    frame.src = preloadFrame.src;
+    lastUrl = href;
+    browserAddress.value = href;
+  } else if (href.startsWith("/")) {
+    frame.src = href;
+    lastUrl = href;
+    browserAddress.value = href;
+  } else {
     openBrowser(href, navEngine.value);
+    return;
   }
+  homeView.classList.add("hidden");
+  browserView.classList.remove("hidden");
+  window.scrollTo(0, 0);
 });
