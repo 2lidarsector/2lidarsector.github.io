@@ -91,6 +91,16 @@ let transportPromise = null;
 async function getTransport() {
   if (transportPromise) return transportPromise;
   transportPromise = (async () => {
+    const mode = window.ARX && ARX.settings ? ARX.settings.transportMode() : "auto";
+    if (mode === "wisp") {
+      const wsUrl =
+        (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
+      return { path: "/epoxy/index.mjs", args: [{ wisp: wsUrl }] };
+    }
+    if (mode === "bare") {
+      const bare = config.bareServers.length ? config.bareServers[0] : "/bare/";
+      return { path: "/lib/remote-client.mjs", args: [bare] };
+    }
     let hasBackend = false;
     try {
       hasBackend = await fetch("/__backend__", { cache: "no-store" }).then((r) => r.ok);
@@ -124,6 +134,10 @@ const navAddress = document.getElementById("nav-address");
 const browserAddress = document.getElementById("browser-address-input");
 const navEngine = document.getElementById("nav-engine");
 
+if (window.ARX && ARX.settings) {
+  const savedUrl = ARX.settings.ENGINES[ARX.settings.engineKey()];
+  if (savedUrl) navEngine.value = savedUrl;
+}
 let currentEngine = navEngine.value;
 let lastUrl = "";
 
@@ -183,7 +197,7 @@ function closeBrowser() {
 
 document.getElementById("hero-form").addEventListener("submit", (e) => {
   e.preventDefault();
-  openBrowser(homeAddress.value, "https://www.google.com/search?q=%s");
+  openBrowser(homeAddress.value, ARX.settings ? ARX.settings.engineTemplate() : "https://www.google.com/search?q=%s");
 });
 
 document.getElementById("nav-form").addEventListener("submit", (e) => {
@@ -198,6 +212,10 @@ document.getElementById("browser-form").addEventListener("submit", (e) => {
 
 navEngine.addEventListener("change", () => {
   currentEngine = navEngine.value;
+  if (window.ARX && ARX.settings) {
+    const key = Object.keys(ARX.settings.ENGINES).find((k) => ARX.settings.ENGINES[k] === navEngine.value);
+    if (key) ARX.settings.set({ engine: key });
+  }
 });
 
 // ---- browser toolbar ----
@@ -223,7 +241,9 @@ document.getElementById("btn-reload").addEventListener("click", () => {
 });
 
 document.getElementById("btn-home").addEventListener("click", () => {
-  openBrowser("https://www.google.com", "https://www.google.com/search?q=%s");
+  const home = ARX.settings ? ARX.settings.homeUrl() : "https://www.google.com";
+  const engine = ARX.settings ? ARX.settings.engineTemplate() : "https://www.google.com/search?q=%s";
+  openBrowser(home, engine);
 });
 
 document.getElementById("btn-exit").addEventListener("click", closeBrowser);
