@@ -1,0 +1,17 @@
+{
+  "name": "unblocked-games",
+  "version": "1.0.0",
+  "description": "Unblocked games portal with Ultraviolet proxy browser",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@mercuryworkshop/bare-mux": "^2.1.8",
+    "@mercuryworkshop/epoxy-transport": "2.1.28",
+    "@mercuryworkshop/wisp-js": "^0.4.1",
+    "@titaniumnetwork-dev/ultraviolet": "^3.2.10",
+    "express": "^5.2.1"
+  }
+}
