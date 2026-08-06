@@ -49,6 +49,22 @@ const library = [
     grad: ["#0ea5e9", "#6366f1"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><g fill="#fff"><rect x="14" y="14" width="30" height="30" rx="6"/><rect x="56" y="14" width="30" height="30" rx="6"/><rect x="14" y="56" width="30" height="30" rx="6"/><rect x="56" y="56" width="30" height="30" rx="6"/></g><g fill="#0ea5e9"><rect x="20" y="20" width="18" height="18" rx="4"/><rect x="62" y="20" width="18" height="18" rx="4"/><rect x="20" y="62" width="18" height="18" rx="4"/><rect x="62" y="62" width="18" height="18" rx="4"/></g></svg>',
   },
+  {
+    name: "Strike 3D",
+    desc: "Third-person shooter with hostiles and building.",
+    path: "/apps/strike3d/",
+    tag: "3D",
+    grad: ["#f59e0b", "#ef4444"],
+    icon: '<svg viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="20" stroke="#fff" stroke-width="6"/><line x1="50" y1="14" x2="50" y2="34" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="66" x2="50" y2="86" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="14" y1="50" x2="34" y2="50" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="66" y1="50" x2="86" y2="50" stroke="#fff" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="50" r="4" fill="#f59e0b"/></svg>',
+  },
+  {
+    name: "Duel Arena",
+    desc: "Local 1v1 arena combat, first to 5.",
+    path: "/apps/duel/",
+    tag: "Arcade",
+    grad: ["#34d399", "#a855f7"],
+    icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="14" y="30" width="22" height="40" rx="6" fill="#34d399"/><rect x="64" y="30" width="22" height="40" rx="6" fill="#f472b6"/><line x1="38" y1="50" x2="62" y2="50" stroke="#fff" stroke-width="4" stroke-dasharray="6 6"/><line x1="26" y1="14" x2="32" y2="30" stroke="#34d399" stroke-width="6" stroke-linecap="round"/><line x1="74" y1="86" x2="68" y2="70" stroke="#f472b6" stroke-width="6" stroke-linecap="round"/></svg>',
+  },
 ];
 
 const connection = new FrameCore.FrameCoreConnection("/lib/transport-worker.js");
