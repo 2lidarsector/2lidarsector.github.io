@@ -73,6 +73,14 @@ const library = [
     grad: ["#f59e0b", "#78716c"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M50 18v18M50 64v18M18 50h18M64 50h18" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="50" r="12" fill="#f59e0b" stroke="#fff" stroke-width="5"/><path d="M50 62c0 14 8 18 8 18s-16-4-16-18" fill="#fff"/></svg>',
   },
+  {
+    name: "UBG",
+    desc: "A huge library of browser games, all in one place.",
+    path: "https://ubg365.github.io/",
+    tag: "Arcade",
+    grad: ["#22c55e", "#0ea5e9"],
+    icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M28 38a16 16 0 1 0 0 24M72 38a16 16 0 1 1 0 24" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M34 46a8 8 0 1 0 0 8M66 46a8 8 0 1 0 0 8" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="82" cy="26" r="6" fill="#f59e0b"/><path d="M82 20v12M76 26h12" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/></svg>',
+  },
 ];
 
 const connection = new FrameCore.FrameCoreConnection("/lib/transport-worker.js");
