@@ -65,6 +65,14 @@ const library = [
     grad: ["#34d399", "#a855f7"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="14" y="30" width="22" height="40" rx="6" fill="#34d399"/><rect x="64" y="30" width="22" height="40" rx="6" fill="#f472b6"/><line x1="38" y1="50" x2="62" y2="50" stroke="#fff" stroke-width="4" stroke-dasharray="6 6"/><line x1="26" y1="14" x2="32" y2="30" stroke="#34d399" stroke-width="6" stroke-linecap="round"/><line x1="74" y1="86" x2="68" y2="70" stroke="#f472b6" stroke-width="6" stroke-linecap="round"/></svg>',
   },
+  {
+    name: "CSGO Skins",
+    desc: "Design custom weapon skins in your browser.",
+    path: "https://meow.slqnt.dev/",
+    tag: "Tool",
+    grad: ["#f59e0b", "#78716c"],
+    icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M50 18v18M50 64v18M18 50h18M64 50h18" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="50" r="12" fill="#f59e0b" stroke="#fff" stroke-width="5"/><path d="M50 62c0 14 8 18 8 18s-16-4-16-18" fill="#fff"/></svg>',
+  },
 ];
 
 const connection = new FrameCore.FrameCoreConnection("/lib/transport-worker.js");
