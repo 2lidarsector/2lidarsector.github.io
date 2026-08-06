@@ -12,28 +12,17 @@ const publicPath = join(process.cwd(), "public");
 
 const app = express();
 
-// Anti-scraper decoy: serve a school "learning portal" page to requests that do
-// not look like a real browser. The decoy auto-redirects to the real site after
-// 5 seconds via <meta refresh>; a one-time cookie lets following requests through.
-const botPattern =
-  /bot|crawler|spider|scraper|scrape|curl|wget|python|httpclient|http-client|requests|scrapy|headless|phantom|selenium|puppeteer|playwright|axios|node-fetch|postman|go-http|okhttp|java\/|ruby|perl|php(?!-)script|lynx|w3m|python-requests/i;
-
-function looksLikeBot(req) {
-  const ua = (req.headers["user-agent"] || "").toLowerCase();
-  if (!ua) return true;
-  if (!ua.includes("mozilla/")) return true;
-  return botPattern.test(ua);
-}
-
+// Decoy gate: every first visit gets served a school "learning portal" page.
+// The decoy auto-redirects to the real site after 5 seconds via <meta refresh>;
+// a one-time cookie set on the decoy lets the follow-up request through, so the
+// real page is never part of a scraper's first snapshot.
 app.use((req, res, next) => {
   if (req.method === "GET" || req.method === "HEAD") {
     if (req.path === "/" || req.path === "/index.html") {
-      if (looksLikeBot(req)) {
-        const passed = (req.headers.cookie || "").includes("arxx_visitor=1");
-        if (!passed) {
-          res.setHeader("Set-Cookie", "arxx_visitor=1; Path=/; Max-Age=600");
-          return res.sendFile(join(publicPath, "decoy.html"));
-        }
+      const passed = (req.headers.cookie || "").includes("arxx_visitor=1");
+      if (!passed) {
+        res.setHeader("Set-Cookie", "arxx_visitor=1; Path=/; Max-Age=600");
+        return res.sendFile(join(publicPath, "decoy.html"));
       }
     }
   }
