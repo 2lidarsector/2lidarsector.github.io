@@ -52,6 +52,37 @@ const library = [
 ];
 
 const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
+const config = window.__ARXX_CONFIG__ || { bareServers: [], wispUrl: null };
+
+let transportPromise = null;
+
+async function getTransport() {
+  if (transportPromise) return transportPromise;
+  transportPromise = (async () => {
+    let hasBackend = false;
+    try {
+      hasBackend = await fetch("/__backend__", { cache: "no-store" }).then((r) => r.ok);
+    } catch (e) {}
+    if (hasBackend) {
+      const wispUrl =
+        (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
+      return { path: "/epoxy/index.mjs", args: [{ wisp: wispUrl }] };
+    }
+    if (config.wispUrl) {
+      return { path: "/epoxy/index.mjs", args: [{ wisp: config.wispUrl }] };
+    }
+    const bare = config.bareServers.length ? config.bareServers[0] : "/bare/";
+    return { path: "/bareasmodule3/index.mjs", args: [bare] };
+  })();
+  return transportPromise;
+}
+
+async function ensureTransport() {
+  const t = await getTransport();
+  if ((await connection.getTransport()) !== t.path) {
+    await connection.setTransport(t.path, t.args);
+  }
+}
 
 const homeView = document.getElementById("home-view");
 const browserView = document.getElementById("browser-view");
@@ -98,11 +129,7 @@ async function openBrowser(rawInput, engineTemplate) {
 
   const url = search(rawInput, engineTemplate);
 
-  let wispUrl =
-    (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
-  if ((await connection.getTransport()) !== "/epoxy/index.mjs") {
-    await connection.setTransport("/epoxy/index.mjs", [{ wisp: wispUrl }]);
-  }
+  await ensureTransport();
 
   lastUrl = url;
   frame.src = __uv$config.prefix + __uv$config.encodeUrl(url);
