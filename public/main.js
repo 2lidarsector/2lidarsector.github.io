@@ -81,6 +81,14 @@ const library = [
     grad: ["#c1fb3d", "#16a34a"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M14 36h26l10 12h36v16H14z" fill="#fff"/><path d="M50 36l10 12 8-4-2 8h14" stroke="#16a34a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="26" cy="58" r="5" fill="#16a34a"/><circle cx="74" cy="58" r="5" fill="#16a34a"/></svg>',
   },
+  {
+    name: "Balatro",
+    desc: "A poker-inspired roguelike deck-builder. Build joker synergies, score blinds, and break the bank.",
+    path: "/apps/balatro/",
+    tag: "Cards",
+    grad: ["#f43f5e", "#7f1d1d"],
+    icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="22" y="14" width="56" height="72" rx="8" fill="#fff" stroke="#7f1d1d" stroke-width="4"/><path d="M50 30l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="#ef4444"/><circle cx="32" cy="26" r="3" fill="#7f1d1d"/><circle cx="68" cy="74" r="3" fill="#7f1d1d"/></svg>',
+  },
 ];
 
 const connection = new FrameCore.FrameCoreConnection("/lib/transport-worker.js");
