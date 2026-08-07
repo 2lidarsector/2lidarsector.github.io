@@ -187,6 +187,10 @@ async function ensureScramjet() {
       });
       await controller.init();
       window.__scramjetController = controller;
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg.active) reg.active.postMessage({ scramjet$type: "init" });
+      } catch (e) {}
       return controller;
     })();
   }

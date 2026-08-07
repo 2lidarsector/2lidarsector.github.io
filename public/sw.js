@@ -18,6 +18,10 @@ function ensureScramjetWorker() {
   }
 }
 
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.resolve(self.clients.claim()).catch(() => {})
@@ -31,16 +35,30 @@ self.addEventListener('message', (event) => {
 });
 
 async function handleRequest(event) {
-  ensureScramjetWorker();
-  if (scramjet) {
-    try {
-      await scramjet.loadConfig();
-    } catch (e) {
-      scramjet = null;
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/scramjet/')) {
+    if (!scramjet) ensureScramjetWorker();
+    if (scramjet) {
+      try {
+        await scramjet.loadConfig();
+      } catch (e) {
+        scramjet = null;
+      }
     }
-  }
-  if (scramjet && scramjet.config && scramjet.route(event)) {
-    return await scramjet.fetch(event);
+    if (scramjet && scramjet.config && scramjet.route(event)) {
+      try {
+        return await scramjet.fetch(event);
+      } catch (e) {
+        return new Response('Scramjet proxy failed to reach the requested site.', {
+          status: 502,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
+    }
+    return new Response('Scramjet proxy is not ready yet. Reload the page and try again.', {
+      status: 503,
+      headers: { 'content-type': 'text/plain' },
+    });
   }
   if (engine.route(event)) {
     return await engine.fetch(event);
