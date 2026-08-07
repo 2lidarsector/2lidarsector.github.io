@@ -166,24 +166,22 @@ function getEngineTemplate() {
 }
 
 async function openBrowser(rawInput, engineTemplate) {
-  try {
-    await registerSW();
-  } catch (err) {
-    alert("Failed to register service worker: " + err);
-    return;
-  }
-
   const url = search(rawInput, engineTemplate);
 
-  await ensureTransport();
-
   lastUrl = url;
-    frame.src = __site$config.prefix + __site$config.encodeUrl(url);
+  frame.src = __site$config.prefix + __site$config.encodeUrl(url);
   browserAddress.value = url;
 
   homeView.classList.add("hidden");
   browserView.classList.remove("hidden");
   window.scrollTo(0, 0);
+
+  try {
+    await registerSW();
+  } catch (e) {}
+  try {
+    await ensureTransport();
+  } catch (e) {}
 }
 
 function closeBrowser() {
