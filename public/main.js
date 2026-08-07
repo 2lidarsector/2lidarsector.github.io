@@ -81,6 +81,14 @@ const library = [
     grad: ["#22c55e", "#0ea5e9"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M28 38a16 16 0 1 0 0 24M72 38a16 16 0 1 1 0 24" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M34 46a8 8 0 1 0 0 8M66 46a8 8 0 1 0 0 8" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="82" cy="26" r="6" fill="#f59e0b"/><path d="M82 20v12M76 26h12" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/></svg>',
   },
+  {
+    name: "Web Dashers",
+    desc: "A modded Geometry Dash demo with level search and a level editor.",
+    path: "/apps/web-dashers/",
+    tag: "Platformer",
+    grad: ["#c1fb3d", "#16a34a"],
+    icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M14 36h26l10 12h36v16H14z" fill="#fff"/><path d="M50 36l10 12 8-4-2 8h14" stroke="#16a34a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="26" cy="58" r="5" fill="#16a34a"/><circle cx="74" cy="58" r="5" fill="#16a34a"/></svg>',
+  },
 ];
 
 const connection = new FrameCore.FrameCoreConnection("/lib/transport-worker.js");
