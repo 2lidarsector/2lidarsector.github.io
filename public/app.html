@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArcadeX</title>
+  <title>Crestview School District - Student Portal</title>
   <link rel="stylesheet" href="/styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236d5df6'/><text x='50' y='68' font-size='55' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>A</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230f4c81'/><path d='M50 18 84 42H66v28H34V42H16Z' fill='%23f2b807'/><path d='M50 28l20 12v-6h8v10l10 5v3H12v-3l38-21Z' fill='%23fff'/></svg>" />
 </head>
 <body>
   <header class="navbar">
     <a href="/" class="logo">
-      <span class="logo-mark">A</span>
-      <span class="logo-text">Arcade<span>X</span></span>
+      <span class="logo-mark">CS</span>
+      <span class="logo-text">Crestview <span>Portal</span></span>
     </a>
     <nav class="nav-links">
       <a href="/" class="nav-link active">Home</a>
@@ -27,7 +27,7 @@
       </select>
       <button type="submit" class="search-btn">Go</button>
     </form>
-    <button class="gear-btn" id="btn-settings" title="Settings" aria-label="Settings">&#9881;</button>
+    <button class="gear-btn" id="btn-settings" title="Menu" aria-label="Menu">&#9881;</button>
   </header>
 
   <main id="home-view">
@@ -84,23 +84,23 @@
         <select id="set-home">
           <option value="https://www.google.com">Google</option>
           <option value="https://www.youtube.com">YouTube</option>
-          <option value="https://ubg365.github.io/">UBG</option>
+          <option value="https://ubg365.github.io/">Activity Hub</option>
         </select>
       </div>
       <div class="settings-row">
         <label for="set-transport">Connection mode</label>
         <select id="set-transport">
           <option value="auto">Auto</option>
-          <option value="wisp">Fast (wisp)</option>
-          <option value="bare">Compatible (bare)</option>
+          <option value="wisp">Fast</option>
+          <option value="bare">Compatible</option>
         </select>
       </div>
       <div class="settings-row">
         <label for="set-cloak">Tab name</label>
         <select id="set-cloak">
-          <option value="default">ArcadeX</option>
-          <option value="crestview">Student Portal</option>
+          <option value="default">Student Portal</option>
           <option value="docs">Google Docs</option>
+          <option value="google">Google Search</option>
         </select>
       </div>
       <div class="settings-actions">
@@ -108,7 +108,7 @@
         <button class="settings-btn" id="btn-settings-reset">Reset</button>
         <button class="settings-btn primary" id="btn-settings-close">Done</button>
       </div>
-      <p class="settings-note">Tab name is applied to this tab only.</p>
+      <p class="settings-note">Tab name and icon are applied to this browser tab.</p>
     </div>
   </div>
 
@@ -131,7 +131,7 @@
   </style>
 
   <footer class="footer">
-    <p>ArcadeX - for educational purposes only.</p>
+    <p>&copy; 2026 Crestview School District - educational resources.</p>
   </footer>
 
   <script src="/lib/transport.js"></script>

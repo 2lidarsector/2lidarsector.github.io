@@ -15,22 +15,23 @@ window.ARX = window.ARX || {};
   };
   var CLOAKS = {
     default: {
-      title: "ArcadeX",
-      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236d5df6'/><text x='50' y='68' font-size='55' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>A</text></svg>",
-    },
-    crestview: {
-      title: "Crestview Student Portal",
+      title: "Crestview School District - Student Portal",
       icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230f4c81'/><path d='M50 18 84 42H66v28H34V42H16Z' fill='%23f2b807'/><path d='M50 28l20 12v-6h8v10l10 5v3H12v-3l38-21Z' fill='%23fff'/></svg>",
     },
     docs: {
       title: "Google Docs",
       icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%234285F4'/><rect x='26' y='18' width='48' height='64' rx='4' fill='white'/><path d='M34 34h32M34 44h32M34 54h20' stroke='%234285F4' stroke-width='5' stroke-linecap='round'/></svg>",
     },
+    google: {
+      title: "Google",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='white'/><path d='M82 51c0-2.5-.2-5-.7-7.3H51v13.8h17.5c-.7 3.9-3 7.2-6.4 9.4v7.8h10.4c6.1-5.6 9.5-13.9 9.5-23.7Z' fill='%234285F4'/><path d='M51 84c8.6 0 15.9-2.9 21.2-7.8l-10.4-7.8c-2.9 2-6.6 3.1-10.8 3.1-8.3 0-15.3-5.6-17.8-13.2H22.6v8.1C28 75.7 38.7 84 51 84Z' fill='%2334A853'/><path d='M33.2 58.3c-.6-1.9-1-3.9-1-6.3s.4-4.4 1-6.3v-8.1H22.6c-2.1 4.2-3.6 9.1-3.6 14.4s1.5 10.2 3.6 14.4l10.6-8.1Z' fill='%23FBBC05'/><path d='M51 31.5c4.7 0 8.9 1.6 12.2 4.8l9.1-9.1C66.9 21.6 59.6 18.5 51 18.5c-12.3 0-23 8.4-28.4 20.1l10.6 8.1c2.5-7.6 9.5-13.2 17.8-13.2Z' fill='%23EA4335'/></svg>",
+    },
   };
 
   function load() {
     var s = {};
     try { s = JSON.parse(localStorage.getItem("arx-settings") || "{}"); } catch (e) {}
+    if (s.cloak === "crestview") s.cloak = "default";
     var out = {};
     for (var k in DEFAULTS) out[k] = s[k] !== undefined ? s[k] : DEFAULTS[k];
     return out;
@@ -52,25 +53,54 @@ window.ARX = window.ARX || {};
   function transportMode() { return load().transport; }
   function cloakName() { return load().cloak; }
 
+  function topDoc() {
+    try {
+      return window.top && window.top.document ? window.top.document : document;
+    } catch (e) {
+      return document;
+    }
+  }
+
   function applyCloak() {
     var c = CLOAKS[cloakName()] || CLOAKS.default;
-    document.title = c.title;
-    var link = document.querySelector('link[rel="icon"]');
+    var doc = topDoc();
+    doc.title = c.title;
+    var link = doc.querySelector('link[rel="icon"]');
     if (!link) {
-      link = document.createElement("link");
+      link = doc.createElement("link");
       link.rel = "icon";
-      document.head.appendChild(link);
+      doc.head.appendChild(link);
     }
     link.href = c.icon;
   }
 
   function aboutBlank() {
-    var w = window.open("about:blank", "_blank");
-    if (w) {
-      w.document.title = "Google";
-      w.document.body.style.cssText = "margin:0;height:100%";
-      w.document.write("<title>Google</title><script>setInterval(function(){if(!document.title){document.title='Google'}},100);history.replaceState(null,'','about:blank')<\\/script>");
+    var w;
+    try {
+      w = window.open("about:blank", "_blank");
+    } catch (e) {}
+    if (!w) {
+      var a = document.createElement("a");
+      a.href = "about:blank";
+      a.target = "_blank";
+      a.rel = "opener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
     }
+    w.focus();
+    w.document.open();
+    w.document.write(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google</title><link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><rect width=%27100%27 height=%27100%27 fill=%27white%27/><path d=%27M82 51c0-2.5-.2-5-.7-7.3H51v13.8h17.5c-.7 3.9-3 7.2-6.4 9.4v7.8h10.4c6.1-5.6 9.5-13.9 9.5-23.7Z%27 fill=%27%234285F4%27/><path d=%27M51 84c8.6 0 15.9-2.9 21.2-7.8l-10.4-7.8c-2.9 2-6.6 3.1-10.8 3.1-8.3 0-15.3-5.6-17.8-13.2H22.6v8.1C28 75.7 38.7 84 51 84Z%27 fill=%27%2334A853%27/><path d=%27M33.2 58.3c-.6-1.9-1-3.9-1-6.3s.4-4.4 1-6.3v-8.1H22.6c-2.1 4.2-3.6 9.1-3.6 14.4s1.5 10.2 3.6 14.4l10.6-8.1Z%27 fill=%27%23FBBC05%27/><path d=%27M51 31.5c4.7 0 8.9 1.6 12.2 4.8l9.1-9.1C66.9 21.6 59.6 18.5 51 18.5c-12.3 0-23 8.4-28.4 20.1l10.6 8.1c2.5-7.6 9.5-13.2 17.8-13.2Z%27 fill=%27%23EA4335%27/></svg>"><style>body{margin:0;height:100%;overflow:hidden}</style></head><body><iframe src="' +
+        location.origin +
+        '/app.html" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe></body></html>'
+    );
+    w.document.close();
+    setInterval(function () {
+      if (w.closed) return;
+      if (w.document.title !== "Google") w.document.title = "Google";
+    }, 500);
   }
 
   window.ARX.settings = {

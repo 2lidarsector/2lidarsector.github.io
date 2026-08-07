@@ -3,9 +3,9 @@
 const library = [
   {
     name: "Snake",
-    desc: "Classic snake. Eat, grow, survive.",
+    desc: "Grow a chain by collecting targets.",
     path: "/apps/snake/",
-    tag: "Classic",
+    tag: "Logic",
     grad: ["#22c55e", "#0ea5e9"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M14 50h44" stroke="#fff" stroke-width="10" stroke-linecap="round"/><path d="M58 50v-22h22v22" stroke="#fff" stroke-width="10" stroke-linecap="round" fill="none"/><circle cx="86" cy="64" r="6" fill="#fff"/><circle cx="36" cy="50" r="4" fill="#052e16"/><circle cx="52" cy="50" r="4" fill="#052e16"/></svg>',
   },
@@ -13,31 +13,31 @@ const library = [
     name: "2048",
     desc: "Merge tiles to reach 2048.",
     path: "/apps/2048/",
-    tag: "Puzzle",
+    tag: "Math",
     grad: ["#f59e0b", "#ef4444"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="14" y="14" width="22" height="22" rx="5" fill="#fff" opacity="0.9"/><rect x="42" y="14" width="22" height="22" rx="5" fill="#fff" opacity="0.7"/><rect x="14" y="42" width="22" height="22" rx="5" fill="#fff" opacity="0.7"/><rect x="42" y="42" width="44" height="44" rx="6" fill="#fff"/><text x="64" y="74" font-size="24" font-weight="bold" text-anchor="middle" fill="#ef4444">2</text></svg>',
   },
   {
     name: "Pong",
-    desc: "1v1 table tennis on a canvas.",
+    desc: "Two-player rally on a canvas.",
     path: "/apps/pong/",
-    tag: "Arcade",
+    tag: "Sports",
     grad: ["#a855f7", "#6366f1"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="8" y="28" width="8" height="44" rx="4" fill="#fff"/><rect x="84" y="28" width="8" height="44" rx="4" fill="#fff"/><line x1="50" y1="8" x2="50" y2="92" stroke="#fff" stroke-width="2" stroke-dasharray="6 6" opacity="0.6"/><circle cx="50" cy="50" r="7" fill="#fff"/></svg>',
   },
   {
     name: "Breakout",
-    desc: "Smash all the bricks.",
+    desc: "Clear the bricks with a bouncing ball.",
     path: "/apps/breakout/",
-    tag: "Arcade",
+    tag: "Physics",
     grad: ["#f472b6", "#f59e0b"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><g fill="#fff"><rect x="10" y="12" width="23" height="12" rx="3"/><rect x="39" y="12" width="23" height="12" rx="3"/><rect x="68" y="12" width="22" height="12" rx="3"/><rect x="10" y="30" width="23" height="12" rx="3"/><rect x="39" y="30" width="23" height="12" rx="3"/><rect x="68" y="30" width="22" height="12" rx="3"/></g><circle cx="62" cy="52" r="7" fill="#fff"/><rect x="22" y="82" width="56" height="9" rx="4.5" fill="#fff"/></svg>',
   },
   {
     name: "Tic-Tac-Toe",
-    desc: "Beat the AI in this classic.",
+    desc: "Beat the computer in this classic.",
     path: "/apps/tic-tac-toe/",
-    tag: "Strategy",
+    tag: "Logic",
     grad: ["#34d399", "#22c55e"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><line x1="30" y1="8" x2="30" y2="92" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="70" y1="8" x2="70" y2="92" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="8" y1="30" x2="92" y2="30" stroke="#fff" stroke-width="6" stroke-linecap="round"/><line x1="8" y1="70" x2="92" y2="70" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>',
   },
@@ -45,13 +45,13 @@ const library = [
     name: "Memory Match",
     desc: "Find all matching pairs.",
     path: "/apps/memory/",
-    tag: "Puzzle",
+    tag: "Cognition",
     grad: ["#0ea5e9", "#6366f1"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><g fill="#fff"><rect x="14" y="14" width="30" height="30" rx="6"/><rect x="56" y="14" width="30" height="30" rx="6"/><rect x="14" y="56" width="30" height="30" rx="6"/><rect x="56" y="56" width="30" height="30" rx="6"/></g><g fill="#0ea5e9"><rect x="20" y="20" width="18" height="18" rx="4"/><rect x="62" y="20" width="18" height="18" rx="4"/><rect x="20" y="62" width="18" height="18" rx="4"/><rect x="62" y="62" width="18" height="18" rx="4"/></g></svg>',
   },
   {
     name: "Strike 3D",
-    desc: "Third-person shooter with hostiles and building.",
+    desc: "Third-person exploration with creative building.",
     path: "/apps/strike3d/",
     tag: "3D",
     grad: ["#f59e0b", "#ef4444"],
@@ -59,25 +59,25 @@ const library = [
   },
   {
     name: "Duel Arena",
-    desc: "Local 1v1 arena combat, first to 5.",
+    desc: "Local two-player arena, first to five.",
     path: "/apps/duel/",
-    tag: "Arcade",
+    tag: "Sports",
     grad: ["#34d399", "#a855f7"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="14" y="30" width="22" height="40" rx="6" fill="#34d399"/><rect x="64" y="30" width="22" height="40" rx="6" fill="#f472b6"/><line x1="38" y1="50" x2="62" y2="50" stroke="#fff" stroke-width="4" stroke-dasharray="6 6"/><line x1="26" y1="14" x2="32" y2="30" stroke="#34d399" stroke-width="6" stroke-linecap="round"/><line x1="74" y1="86" x2="68" y2="70" stroke="#f472b6" stroke-width="6" stroke-linecap="round"/></svg>',
   },
   {
-    name: "CSGO",
-    desc: "A realistic CSGO port, playable in your browser.",
+    name: "Team Strike",
+    desc: "A realistic tactical port for your browser.",
     path: "https://meow.slqnt.dev/",
     tag: "3D",
     grad: ["#f59e0b", "#78716c"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M50 18v18M50 64v18M18 50h18M64 50h18" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="50" r="12" fill="#f59e0b" stroke="#fff" stroke-width="5"/><path d="M50 62c0 14 8 18 8 18s-16-4-16-18" fill="#fff"/></svg>',
   },
   {
-    name: "UBG",
-    desc: "A huge library of browser games, all in one place.",
+    name: "Activity Hub",
+    desc: "A huge library of online activities, all in one place.",
     path: "https://ubg365.github.io/",
-    tag: "Arcade",
+    tag: "Library",
     grad: ["#22c55e", "#0ea5e9"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M28 38a16 16 0 1 0 0 24M72 38a16 16 0 1 1 0 24" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M34 46a8 8 0 1 0 0 8M66 46a8 8 0 1 0 0 8" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="82" cy="26" r="6" fill="#f59e0b"/><path d="M82 20v12M76 26h12" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/></svg>',
   },
@@ -94,26 +94,26 @@ async function getTransport() {
     const mode = window.ARX && ARX.settings ? ARX.settings.transportMode() : "auto";
     if (mode === "wisp") {
       const wsUrl =
-        (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
-      return { path: "/epoxy/index.mjs", args: [{ wisp: wsUrl }] };
+        (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/stream/";
+      return { path: "/net/index.mjs", args: [{ wisp: wsUrl }] };
     }
     if (mode === "bare") {
-      const bare = config.bareServers.length ? config.bareServers[0] : "/bare/";
+      const bare = config.bareServers.length ? config.bareServers[0] : "/remote/";
       return { path: "/lib/remote-client.mjs", args: [bare] };
     }
     let hasBackend = false;
     try {
-      hasBackend = await fetch("/__backend__", { cache: "no-store" }).then((r) => r.ok);
+      hasBackend = await fetch("/__status__", { cache: "no-store" }).then((r) => r.ok);
     } catch (e) {}
     if (hasBackend) {
       const wsUrl =
-        (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
-      return { path: "/epoxy/index.mjs", args: [{ wisp: wsUrl }] };
+        (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/stream/";
+      return { path: "/net/index.mjs", args: [{ wisp: wsUrl }] };
     }
     if (config.wsUrl) {
-      return { path: "/epoxy/index.mjs", args: [{ wisp: config.wsUrl }] };
+      return { path: "/net/index.mjs", args: [{ wisp: config.wsUrl }] };
     }
-    const bare = config.bareServers.length ? config.bareServers[0] : "/bare/";
+    const bare = config.bareServers.length ? config.bareServers[0] : "/remote/";
     return { path: "/lib/remote-client.mjs", args: [bare] };
   })();
   return transportPromise;

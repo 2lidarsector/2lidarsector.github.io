@@ -12,14 +12,14 @@ const app = express();
 
 // Marker so the frontend can detect this same-origin backend
 // (present here, absent on static hosts like GitHub Pages).
-app.get("/__backend__", (req, res) => {
+app.get("/__status__", (req, res) => {
   res.type("text/plain").send("ok");
 });
 
-// Load our publicPath first and prioritize it over UV.
+// Load our publicPath first and prioritize it over other assets.
 app.use(express.static(publicPath));
-// Epoxy transport is backend-only (served from node_modules, never on Pages).
-app.use("/epoxy/", express.static(epoxyPath));
+// Transport client is backend-only (served from node_modules, never on Pages).
+app.use("/net/", express.static(epoxyPath));
 
 // Error for everything else
 app.use((req, res) => {
@@ -27,7 +27,7 @@ app.use((req, res) => {
   res.sendFile(join(publicPath, "404.html"));
 });
 
-const bare = createBareServer("/bare/");
+const bare = createBareServer("/remote/");
 const server = createServer();
 
 server.on("request", (req, res) => {
@@ -44,7 +44,7 @@ server.on("upgrade", (req, socket, head) => {
     bare.routeUpgrade(req, socket, head);
     return;
   }
-  if (req.url.endsWith("/wisp/")) {
+  if (req.url.endsWith("/stream/")) {
     wisp.routeRequest(req, socket, head);
     return;
   }
