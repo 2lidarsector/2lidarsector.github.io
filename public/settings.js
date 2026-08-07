@@ -15,8 +15,8 @@ window.ARX = window.ARX || {};
   };
   var CLOAKS = {
     default: {
-      title: "Crestview School District - Student Portal",
-      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230f4c81'/><path d='M50 18 84 42H66v28H34V42H16Z' fill='%23f2b807'/><path d='M50 28l20 12v-6h8v10l10 5v3H12v-3l38-21Z' fill='%23fff'/></svg>",
+      title: "Launcher",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%236d7df6'/><circle cx='50' cy='50' r='26' fill='none' stroke='%23151925' stroke-width='12' stroke-linecap='round'/></svg>",
     },
     docs: {
       title: "Google Docs",
