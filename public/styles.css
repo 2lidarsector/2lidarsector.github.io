@@ -14,7 +14,15 @@
   --muted: #7d859b;
   --accent: #6d7df6;
   --accent-2: #2dd4bf;
+  --accent-deep: #4f5bd5;
+  --accent-bright: #7c8bf8;
+  --accent-glow: rgba(109, 125, 246, 0.18);
+  --selection: rgba(109, 125, 246, 0.35);
   --danger: #f87171;
+  --nav-bg: rgba(10, 12, 20, 0.72);
+  --nav-bg-2: rgba(15, 18, 29, 0.9);
+  --scroll-thumb: #2a3042;
+  --scroll-thumb-hover: #3a4158;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -56,7 +64,7 @@ a {
 }
 
 ::selection {
-  background: rgba(109, 125, 246, 0.35);
+  background: var(--selection);
 }
 
 :focus-visible {
@@ -70,13 +78,13 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a3042;
+  background: var(--scroll-thumb);
   border-radius: 999px;
   border: 2px solid var(--bg);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a4158;
+  background: var(--scroll-thumb-hover);
 }
 
 .hidden {

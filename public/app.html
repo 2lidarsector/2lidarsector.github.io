@@ -114,8 +114,31 @@
           <option value="google">Google Search</option>
         </select>
       </div>
+      <div class="settings-row">
+        <label for="set-theme">Theme</label>
+        <select id="set-theme">
+          <option value="midnight">Midnight</option>
+          <option value="neon">Neon</option>
+          <option value="forest">Forest</option>
+          <option value="ocean">Ocean</option>
+          <option value="sunset">Sunset</option>
+          <option value="graphite">Graphite</option>
+          <option value="paper">Paper</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="settings-row hidden" id="theme-custom-row">
+        <label for="set-theme-bg">Custom colors</label>
+        <div class="color-row">
+          <label class="color-item">Bg<input type="color" id="set-theme-bg" value="#0a0c14" /></label>
+          <label class="color-item">Accent<input type="color" id="set-theme-accent" value="#6d7df6" /></label>
+          <label class="color-item">Accent 2<input type="color" id="set-theme-accent2" value="#2dd4bf" /></label>
+          <label class="color-item">Text<input type="color" id="set-theme-text" value="#e7eaf3" /></label>
+        </div>
+      </div>
       <div class="settings-actions">
         <button class="settings-btn" id="btn-aboutblank">Open blank tab</button>
+        <button class="settings-btn" id="btn-blobtab">Blob tab</button>
         <button class="settings-btn" id="btn-settings-reset">Reset</button>
         <button class="settings-btn primary" id="btn-settings-close">Done</button>
       </div>

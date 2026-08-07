@@ -7,6 +7,7 @@ window.ARX = window.ARX || {};
     transport: "bare",
     proxyUrl: "",
     cloak: "default",
+    theme: "midnight",
   };
   var ENGINES = {
     google: "https://www.google.com/search?q=%s",
@@ -28,6 +29,92 @@ window.ARX = window.ARX || {};
       icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='white'/><path d='M82 51c0-2.5-.2-5-.7-7.3H51v13.8h17.5c-.7 3.9-3 7.2-6.4 9.4v7.8h10.4c6.1-5.6 9.5-13.9 9.5-23.7Z' fill='%234285F4'/><path d='M51 84c8.6 0 15.9-2.9 21.2-7.8l-10.4-7.8c-2.9 2-6.6 3.1-10.8 3.1-8.3 0-15.3-5.6-17.8-13.2H22.6v8.1C28 75.7 38.7 84 51 84Z' fill='%2334A853'/><path d='M33.2 58.3c-.6-1.9-1-3.9-1-6.3s.4-4.4 1-6.3v-8.1H22.6c-2.1 4.2-3.6 9.1-3.6 14.4s1.5 10.2 3.6 14.4l10.6-8.1Z' fill='%23FBBC05'/><path d='M51 31.5c4.7 0 8.9 1.6 12.2 4.8l9.1-9.1C66.9 21.6 59.6 18.5 51 18.5c-12.3 0-23 8.4-28.4 20.1l10.6 8.1c2.5-7.6 9.5-13.2 17.8-13.2Z' fill='%23EA4335'/></svg>",
     },
   };
+
+  var THEME_BASES = {
+    midnight: { bg: "#0a0c14", surface: "#0f121d", surface2: "#141826", card: "#161b2b", accent: "#6d7df6", accent2: "#2dd4bf", text: "#e7eaf3" },
+    neon: { bg: "#0d0a1a", surface: "#161029", surface2: "#1c1436", card: "#211a40", accent: "#a78bfa", accent2: "#f472b6", text: "#f3efff" },
+    forest: { bg: "#081410", surface: "#0d2018", surface2: "#122a1f", card: "#153025", accent: "#4ade80", accent2: "#34d399", text: "#e8f5ee" },
+    ocean: { bg: "#071120", surface: "#0c1c31", surface2: "#112742", card: "#142d4a", accent: "#38bdf8", accent2: "#22d3ee", text: "#e8f1fb" },
+    sunset: { bg: "#1a0a10", surface: "#281218", surface2: "#331a21", card: "#3a1f27", accent: "#fb7185", accent2: "#fbbf24", text: "#fdeef1" },
+    graphite: { bg: "#0b0c0e", surface: "#121316", surface2: "#17181c", card: "#1a1b20", accent: "#94a3b8", accent2: "#e2e8f0", text: "#eef0f4" },
+    paper: { bg: "#f3f4f7", surface: "#ffffff", surface2: "#eceef2", card: "#ffffff", accent: "#4f5bd5", accent2: "#0d9488", text: "#1a1d26" },
+  };
+
+  function hexRgb(hex) {
+    var v = parseInt(hex.slice(1), 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  }
+  function rgba(hex, a) {
+    var c = hexRgb(hex);
+    return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")";
+  }
+  function shade(hex, amt) {
+    var c = hexRgb(hex).map(function (v) {
+      v = Math.round(v + amt * 255);
+      return Math.max(0, Math.min(255, v));
+    });
+    return (
+      "#" +
+      c
+        .map(function (v) {
+          return ("0" + v.toString(16)).slice(-2);
+        })
+        .join("")
+    );
+  }
+
+  function themeTokens(name, custom) {
+    var b =
+      name === "custom"
+        ? custom || {}
+        : THEME_BASES[name] || THEME_BASES.midnight;
+    var bg = b.bg || "#0a0c14";
+    var accent = b.accent || "#6d7df6";
+    var accent2 = b.accent2 || "#2dd4bf";
+    var text = b.text || "#e7eaf3";
+    return {
+      "--bg": bg,
+      "--surface": b.surface || shade(bg, 0.05),
+      "--surface-2": b.surface2 || shade(bg, 0.09),
+      "--card": b.card || shade(bg, 0.11),
+      "--border": rgba(text, 0.13),
+      "--border-strong": rgba(text, 0.26),
+      "--text": text,
+      "--dim": rgba(text, 0.72),
+      "--muted": rgba(text, 0.5),
+      "--accent": accent,
+      "--accent-2": accent2,
+      "--accent-deep": shade(accent, -0.16),
+      "--accent-bright": shade(accent, 0.12),
+      "--accent-glow": rgba(accent, 0.18),
+      "--selection": rgba(accent, 0.35),
+      "--glow-1": rgba(accent, 0.13),
+      "--glow-2": rgba(accent2, 0.09),
+      "--nav-bg": rgba(bg, 0.72),
+      "--nav-bg-2": rgba(bg, 0.9),
+      "--scroll-thumb": rgba(text, 0.16),
+      "--scroll-thumb-hover": rgba(text, 0.26),
+    };
+  }
+
+  function applyTheme() {
+    var vars = themeTokens(themeName(), themeCustom());
+    var css =
+      ":root{" +
+      Object.keys(vars)
+        .map(function (k) {
+          return k + ":" + vars[k] + ";";
+        })
+        .join("") +
+      "}";
+    var el = document.getElementById("arx-theme");
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "arx-theme";
+      document.head.appendChild(el);
+    }
+    el.textContent = css;
+  }
 
   function load() {
     var s = {};
@@ -54,6 +141,8 @@ window.ARX = window.ARX || {};
   function transportMode() { return load().transport; }
   function transportUrl() { return load().proxyUrl; }
   function cloakName() { return load().cloak; }
+  function themeName() { return load().theme; }
+  function themeCustom() { return load().themeCustom || {}; }
 
   function topDoc() {
     try {
@@ -105,6 +194,49 @@ window.ARX = window.ARX || {};
     }, 500);
   }
 
+  function blobTab() {
+    var c = CLOAKS[cloakName()] || CLOAKS.default;
+    var src = null;
+    var frameEl = document.getElementById("frame");
+    if (frameEl && frameEl.src) {
+      try {
+        var u = new URL(frameEl.src);
+        if (
+          u.origin === location.origin &&
+          (u.pathname === "/app.html" || u.pathname.indexOf("/apps/") === 0)
+        ) {
+          src = frameEl.src;
+        }
+      } catch (e) {}
+    }
+    if (!src) src = location.origin + "/app.html";
+    var html =
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' +
+      c.title +
+      '</title><link rel="icon" href="' +
+      c.icon +
+      '"><style>body{margin:0;height:100%;overflow:hidden}</style></head><body><iframe src="' +
+      src +
+      '" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe></body></html>';
+    var w;
+    try {
+      var blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      w = window.open(blobUrl, "_blank");
+    } catch (e) {}
+    if (!w) {
+      aboutBlank();
+      return;
+    }
+    w.focus();
+    setInterval(function () {
+      if (w.closed) return;
+      if (w.document.title !== c.title) w.document.title = c.title;
+      var link = w.document.querySelector('link[rel="icon"]');
+      if (link && link.href !== c.icon) link.href = c.icon;
+    }, 500);
+    try { window.close(); } catch (e) {}
+  }
+
   window.ARX.settings = {
     ENGINES: ENGINES,
     CLOAKS: CLOAKS,
@@ -118,7 +250,11 @@ window.ARX = window.ARX || {};
     transportUrl: transportUrl,
     cloakName: cloakName,
     applyCloak: applyCloak,
+    themeName: themeName,
+    themeCustom: themeCustom,
+    applyTheme: applyTheme,
     aboutBlank: aboutBlank,
+    blobTab: blobTab,
   };
 
   var engineSel = document.getElementById("set-engine");
@@ -127,6 +263,12 @@ window.ARX = window.ARX || {};
   var transportUrlInput = document.getElementById("set-transport-url");
   var transportCustomRow = document.getElementById("transport-custom-row");
   var cloakSel = document.getElementById("set-cloak");
+  var themeSel = document.getElementById("set-theme");
+  var themeCustomRow = document.getElementById("theme-custom-row");
+  var themeBg = document.getElementById("set-theme-bg");
+  var themeAccent = document.getElementById("set-theme-accent");
+  var themeAccent2 = document.getElementById("set-theme-accent2");
+  var themeText = document.getElementById("set-theme-text");
   var modal = document.getElementById("settings-modal");
   var navEngine = document.getElementById("nav-engine");
 
@@ -134,6 +276,18 @@ window.ARX = window.ARX || {};
     if (!transportCustomRow || !transportUrlInput) return;
     transportCustomRow.classList.toggle("hidden", transportSel.value !== "custom");
     if (transportSel.value === "custom") transportUrlInput.value = transportUrl();
+  }
+
+  function syncThemeRow() {
+    if (!themeCustomRow) return;
+    themeCustomRow.classList.toggle("hidden", themeSel.value !== "custom");
+    if (themeSel.value === "custom") {
+      var c = themeCustom();
+      if (themeBg) themeBg.value = c.bg || "#0a0c14";
+      if (themeAccent) themeAccent.value = c.accent || "#6d7df6";
+      if (themeAccent2) themeAccent2.value = c.accent2 || "#2dd4bf";
+      if (themeText) themeText.value = c.text || "#e7eaf3";
+    }
   }
 
   if (engineSel) {
@@ -158,17 +312,41 @@ window.ARX = window.ARX || {};
     cloakSel.value = cloakName();
     cloakSel.addEventListener("change", function () { set({ cloak: cloakSel.value }); applyCloak(); });
   }
+  if (themeSel) {
+    themeSel.value = themeName();
+    themeSel.addEventListener("change", function () { set({ theme: themeSel.value }); syncThemeRow(); applyTheme(); });
+  }
+  var themeInputs = [
+    [themeBg, "bg"],
+    [themeAccent, "accent"],
+    [themeAccent2, "accent2"],
+    [themeText, "text"],
+  ];
+  for (var ti = 0; ti < themeInputs.length; ti++) {
+    (function (input, key) {
+      if (!input) return;
+      input.addEventListener("input", function () {
+        var c = themeCustom();
+        c[key] = input.value;
+        set({ themeCustom: c });
+        applyTheme();
+      });
+    })(themeInputs[ti][0], themeInputs[ti][1]);
+  }
   var openBtn = document.getElementById("btn-settings");
   var closeBtn = document.getElementById("btn-settings-close");
   var resetBtn = document.getElementById("btn-settings-reset");
   var blankBtn = document.getElementById("btn-aboutblank");
+  var blobTabBtn = document.getElementById("btn-blobtab");
   if (openBtn) openBtn.addEventListener("click", function () {
     modal.classList.remove("hidden");
     if (engineSel) engineSel.value = engineKey();
     if (homeSel) homeSel.value = homeUrl();
     if (transportSel) transportSel.value = transportMode();
     if (cloakSel) cloakSel.value = cloakName();
+    if (themeSel) themeSel.value = themeName();
     syncTransportRow();
+    syncThemeRow();
   });
   if (closeBtn) closeBtn.addEventListener("click", function () { modal.classList.add("hidden"); });
   if (resetBtn) resetBtn.addEventListener("click", function () {
@@ -177,15 +355,20 @@ window.ARX = window.ARX || {};
     if (homeSel) homeSel.value = "https://www.google.com";
     if (transportSel) transportSel.value = "bare";
     if (cloakSel) cloakSel.value = "default";
+    if (themeSel) themeSel.value = "midnight";
     if (navEngine) navEngine.value = ENGINES.ddg;
     if (transportUrlInput) transportUrlInput.value = "";
     syncTransportRow();
+    syncThemeRow();
     applyCloak();
+    applyTheme();
   });
   if (blankBtn) blankBtn.addEventListener("click", aboutBlank);
+  if (blobTabBtn) blobTabBtn.addEventListener("click", blobTab);
   if (modal) modal.addEventListener("click", function (e) {
     if (e.target === modal) modal.classList.add("hidden");
   });
 
   applyCloak();
+  applyTheme();
 })();
