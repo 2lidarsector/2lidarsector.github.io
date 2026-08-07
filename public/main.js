@@ -76,7 +76,7 @@ const library = [
   {
     name: "Activity Hub",
     desc: "A huge library of online activities, all in one place.",
-    path: "https://ubg365.github.io/",
+    path: "https://githubgames.gitlab.io/",
     tag: "Library",
     grad: ["#22c55e", "#0ea5e9"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M28 38a16 16 0 1 0 0 24M72 38a16 16 0 1 1 0 24" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M34 46a8 8 0 1 0 0 8M66 46a8 8 0 1 0 0 8" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="82" cy="26" r="6" fill="#f59e0b"/><path d="M82 20v12M76 26h12" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/></svg>',
