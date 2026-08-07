@@ -4,7 +4,7 @@ window.ARX = window.ARX || {};
   var DEFAULTS = {
     engine: "ddg",
     home: "https://www.google.com",
-    transport: "auto",
+    transport: "bare",
     cloak: "default",
   };
   var ENGINES = {
@@ -32,6 +32,7 @@ window.ARX = window.ARX || {};
     var s = {};
     try { s = JSON.parse(localStorage.getItem("arx-settings") || "{}"); } catch (e) {}
     if (s.cloak === "crestview") s.cloak = "default";
+    if (s.transport === "auto") s.transport = "bare";
     var out = {};
     for (var k in DEFAULTS) out[k] = s[k] !== undefined ? s[k] : DEFAULTS[k];
     return out;
@@ -160,7 +161,7 @@ window.ARX = window.ARX || {};
     reset();
     if (engineSel) engineSel.value = "ddg";
     if (homeSel) homeSel.value = "https://www.google.com";
-    if (transportSel) transportSel.value = "auto";
+    if (transportSel) transportSel.value = "bare";
     if (cloakSel) cloakSel.value = "default";
     if (navEngine) navEngine.value = ENGINES.ddg;
     applyCloak();

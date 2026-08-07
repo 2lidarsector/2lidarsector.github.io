@@ -27,7 +27,9 @@ app.use((req, res) => {
   res.sendFile(join(publicPath, "404.html"));
 });
 
-const bare = createBareServer("/remote/");
+const bare = createBareServer("/remote/", {
+  connectionLimiter: { maxConnectionsPerIP: 100000, windowDuration: 1 },
+});
 const server = createServer();
 
 server.on("request", (req, res) => {

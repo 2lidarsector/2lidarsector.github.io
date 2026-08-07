@@ -99,7 +99,7 @@ async function getTransport() {
     }
     if (mode === "bare") {
       const bare = config.bareServers.length ? config.bareServers[0] : "/remote/";
-      return { path: "/lib/remote-client.mjs", args: [bare] };
+      return { path: "/lib/remote-client.mjs", args: [new URL(bare, location.href).toString()] };
     }
     let hasBackend = false;
     try {
@@ -114,7 +114,7 @@ async function getTransport() {
       return { path: "/net/index.mjs", args: [{ wisp: config.wsUrl }] };
     }
     const bare = config.bareServers.length ? config.bareServers[0] : "/remote/";
-    return { path: "/lib/remote-client.mjs", args: [bare] };
+    return { path: "/lib/remote-client.mjs", args: [new URL(bare, location.href).toString()] };
   })();
   return transportPromise;
 }
