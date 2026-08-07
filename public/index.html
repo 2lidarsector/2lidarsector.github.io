@@ -3,32 +3,47 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Launcher</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%236d7df6'/><circle cx='50' cy='50' r='26' fill='none' stroke='%23151925' stroke-width='12' stroke-linecap='round'/></svg>" />
+<title>MathLab - Practice Drills</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230f121d'/><text x='50' y='72' font-size='62' font-family='Georgia,serif' font-weight='bold' fill='%232dd4bf' text-anchor='middle'>&#960;</text></svg>" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; }
   body {
     font-family: "Inter", "Segoe UI", system-ui, sans-serif;
     background: #0f121d;
     color: #e7e9ff;
-    display: grid;
-    place-items: center;
     min-height: 100vh;
-    text-align: center;
-    padding: 24px;
+    display: flex;
+    flex-direction: column;
   }
-  .splash-mark {
-    width: 72px; height: 72px;
-    margin: 0 auto 20px;
-    border-radius: 22px;
-    background: linear-gradient(135deg, #6d7df6, #2dd4bf);
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 28px;
+    background: rgba(20, 24, 38, 0.9);
+    border-bottom: 1px solid #232946;
+  }
+  .mark {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2dd4bf, #6d7df6);
     display: grid; place-items: center;
-    font-size: 34px; font-weight: 800; color: #0f121d;
+    font-size: 22px; font-weight: 800; color: #0f121d;
+    font-family: Georgia, serif;
   }
-  h1 { font-size: 30px; margin-bottom: 8px; }
-  p { color: #8b90c4; margin-bottom: 28px; }
-  a.splash-btn {
+  header h1 { font-size: 19px; }
+  header p { font-size: 12px; color: #8b90c4; }
+  nav { margin-left: auto; }
+  nav a { color: #6d7df6; text-decoration: none; font-size: 14px; }
+  .hero {
+    background: linear-gradient(135deg, #101828, #1a2140);
+    padding: 44px 28px;
+    text-align: center;
+    border-bottom: 1px solid #232946;
+  }
+  .hero h2 { font-size: 28px; margin-bottom: 10px; }
+  .hero p { color: #8b90c4; max-width: 560px; margin: 0 auto 24px; }
+  .btn {
     display: inline-block;
     padding: 12px 32px;
     border-radius: 999px;
@@ -36,17 +51,164 @@
     color: #fff;
     font-weight: 600;
     text-decoration: none;
+    border: 0;
+    cursor: pointer;
+    font-size: 15px;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
-  a.splash-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109, 125, 246, 0.35); }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109, 125, 246, 0.35); }
+  main {
+    flex: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px 24px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) { main { grid-template-columns: 1fr; } }
+  .card {
+    background: #141826;
+    border: 1px solid #232946;
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .card h3 { font-size: 16px; margin-bottom: 14px; }
+  .problem {
+    font-family: Georgia, serif;
+    font-size: 30px;
+    text-align: center;
+    padding: 18px;
+    background: #0f121d;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    border: 1px solid #232946;
+  }
+  .answer-row { display: flex; gap: 10px; }
+  .answer-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #2a3050;
+    background: #0f121d;
+    color: #e7e9ff;
+    font-size: 15px;
+  }
+  .answer-row input:focus { outline: 2px solid #6d7df6; border-color: transparent; }
+  .feedback { margin-top: 12px; font-size: 14px; min-height: 20px; }
+  .feedback.ok { color: #2dd4bf; }
+  .feedback.no { color: #f472b6; }
+  .next { margin-top: 10px; width: 100%; }
+  .topics ul { list-style: none; }
+  .topics li {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #b9bede;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .topics li:nth-child(odd) { background: #0f121d; }
+  footer {
+    background: #0a0c16;
+    color: #5d6280;
+    text-align: center;
+    padding: 14px;
+    font-size: 13px;
+    border-top: 1px solid #1a1f33;
+  }
 </style>
 </head>
 <body>
-  <main>
-    <div class="splash-mark">L</div>
-    <h1>Launcher</h1>
-    <p>Your apps and links, in one place.</p>
-    <a class="splash-btn" href="/app.html">Open</a>
-  </main>
+<header>
+  <div class="mark">&pi;</div>
+  <div>
+    <h1>MathLab</h1>
+    <p>Practice drills that build speed.</p>
+  </div>
+  <nav><a href="#practice">Practice</a></nav>
+</header>
+
+<section class="hero">
+  <h2>Practice makes progress</h2>
+  <p>Short, focused drills for arithmetic, fractions, and algebra basics. Five minutes a day is enough.</p>
+  <a class="btn" href="/app.html">Enter practice mode</a>
+</section>
+
+<main>
+  <div class="card" id="practice">
+    <h3>Quick Drill</h3>
+    <div class="problem" id="problem">3 &times; 7 = ?</div>
+    <div class="answer-row">
+      <input type="text" id="answer" placeholder="Your answer" inputmode="numeric" autocomplete="off" />
+      <button class="btn" id="check">Check</button>
+    </div>
+    <p class="feedback" id="feedback"></p>
+    <button class="btn next" id="next">Next problem</button>
+  </div>
+
+  <div class="card topics">
+    <h3>Topics</h3>
+    <ul>
+      <li>Addition &amp; subtraction</li>
+      <li>Multiplication tables</li>
+      <li>Division basics</li>
+      <li>Fractions &amp; decimals</li>
+      <li>Percents</li>
+      <li>Algebra expressions</li>
+    </ul>
+  </div>
+</main>
+
+<footer>&copy; 2026 MathLab &middot; daily practice drills</footer>
+
+<script>
+  var ops = [
+    { sym: "+", f: function (a, b) { return a + b; }, lo: 5, hi: 50 },
+    { sym: "-", f: function (a, b) { return a - b; }, lo: 5, hi: 50 },
+    { sym: "&times;", f: function (a, b) { return a * b; }, lo: 2, hi: 12 },
+    { sym: "&divide;", f: function (a, b) { return a / b; }, lo: 2, hi: 12 },
+  ];
+  var current = null;
+  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function nextProblem() {
+    var op = ops[rand(0, ops.length - 1)];
+    var a, b;
+    if (op.sym === "&divide;") {
+      b = rand(op.lo, op.hi);
+      a = b * rand(op.lo, op.hi);
+    } else {
+      a = rand(op.lo, op.hi);
+      b = rand(op.lo, op.hi);
+    }
+    current = { a: a, b: b, op: op };
+    document.getElementById("problem").innerHTML = a + " " + op.sym + " " + b + " = ?";
+    document.getElementById("feedback").textContent = "";
+    document.getElementById("feedback").className = "feedback";
+    document.getElementById("answer").value = "";
+    document.getElementById("answer").focus();
+  }
+  function check() {
+    var el = document.getElementById("answer");
+    var fb = document.getElementById("feedback");
+    var v = parseFloat(el.value);
+    if (isNaN(v)) { fb.textContent = "Enter a number."; fb.className = "feedback no"; return; }
+    if (Math.abs(v - current.op.f(current.a, current.b)) < 0.001) {
+      fb.textContent = "Correct! Nice work.";
+      fb.className = "feedback ok";
+    } else {
+      fb.textContent = "Not quite — try again.";
+      fb.className = "feedback no";
+    }
+  }
+  document.getElementById("check").addEventListener("click", check);
+  document.getElementById("next").addEventListener("click", nextProblem);
+  document.getElementById("answer").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") check();
+  });
+  nextProblem();
+</script>
 </body>
 </html>

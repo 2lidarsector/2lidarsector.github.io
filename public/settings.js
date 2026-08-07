@@ -15,8 +15,8 @@ window.ARX = window.ARX || {};
   };
   var CLOAKS = {
     default: {
-      title: "Launcher",
-      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%236d7df6'/><circle cx='50' cy='50' r='26' fill='none' stroke='%23151925' stroke-width='12' stroke-linecap='round'/></svg>",
+      title: "MathLab - Practice Drills",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230f121d'/><text x='50' y='72' font-size='62' font-family='Georgia,serif' font-weight='bold' fill='%232dd4bf' text-anchor='middle'>&#960;</text></svg>",
     },
     docs: {
       title: "Google Docs",
