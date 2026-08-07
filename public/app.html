@@ -96,9 +96,15 @@
         <label for="set-transport">Connection mode</label>
         <select id="set-transport">
           <option value="auto">Auto</option>
-          <option value="wisp">Fast</option>
-          <option value="bare" selected>Compatible</option>
+          <option value="wisp">Wisp</option>
+          <option value="bare" selected>Bare</option>
+          <option value="scramjet">Scram</option>
+          <option value="custom">Custom</option>
         </select>
+      </div>
+      <div class="settings-row hidden" id="transport-custom-row">
+        <label for="set-transport-url">Server URL</label>
+        <input type="text" id="set-transport-url" placeholder="https://host/bare/ or wss://host/stream/" autocomplete="off" spellcheck="false" />
       </div>
       <div class="settings-row">
         <label for="set-cloak">Tab name</label>

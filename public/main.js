@@ -85,13 +85,38 @@ const library = [
 
 const connection = new FrameCore.FrameCoreConnection("/lib/transport-worker.js");
 const config = window.__ARXX_CONFIG__ || { bareServers: [], wsUrl: null };
+let uvFallback = false;
+
+navigator.serviceWorker.addEventListener(
+  "message",
+  (event) => {
+    if (
+      settingsMode() === "scramjet" &&
+      event.data &&
+      event.data.type === "getPort" &&
+      event.data.port
+    ) {
+      try {
+        const port = uvFallback
+          ? new SharedWorker("/lib/transport-worker.js", "arcade-bus-worker").port
+          : new SharedWorker("/baremux/worker.js", "bare-mux-worker").port;
+        event.data.port.postMessage(port, [port]);
+      } catch (e) {}
+    }
+  },
+  { capture: true }
+);
 
 let transportPromise = null;
+
+function settingsMode() {
+  return window.ARX && ARX.settings ? ARX.settings.transportMode() : "auto";
+}
 
 async function getTransport() {
   if (transportPromise) return transportPromise;
   transportPromise = (async () => {
-    const mode = window.ARX && ARX.settings ? ARX.settings.transportMode() : "auto";
+    const mode = settingsMode();
     if (mode === "wisp") {
       const wsUrl =
         (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/stream/";
@@ -100,6 +125,17 @@ async function getTransport() {
     if (mode === "bare") {
       const bare = config.bareServers.length ? config.bareServers[0] : "/remote/";
       return { path: "/lib/remote-client.mjs", args: [new URL(bare, location.href).toString()] };
+    }
+    if (mode === "custom") {
+      const custom = (window.ARX && ARX.settings ? ARX.settings.transportUrl() : "").trim();
+      if (custom) {
+        if (/^wss?:\/\//i.test(custom)) {
+          return { path: "/net/index.mjs", args: [{ wisp: custom }] };
+        }
+        if (/^https?:\/\//i.test(custom)) {
+          return { path: "/lib/remote-client.mjs", args: [new URL(custom, location.href).toString()] };
+        }
+      }
     }
     let hasBackend = false;
     try {
@@ -124,6 +160,84 @@ async function ensureTransport() {
   if ((await connection.getTransport()) !== t.path) {
     await connection.setTransport(t.path, t.args);
   }
+}
+
+let scramjetReady = null;
+async function ensureScramjet() {
+  if (window.__scramjetController) return window.__scramjetController;
+  if (!scramjetReady) {
+    scramjetReady = (async () => {
+      if (typeof $scramjetLoadController !== "function") {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = "/scram/scramjet.all.js";
+          s.onload = resolve;
+          s.onerror = () => reject(new Error("Failed to load scramjet client"));
+          document.head.appendChild(s);
+        });
+      }
+      await repairScramjetDb();
+      const { ScramjetController } = $scramjetLoadController();
+      const controller = new ScramjetController({
+        files: {
+          wasm: "/scram/scramjet.wasm.wasm",
+          all: "/scram/scramjet.all.js",
+          sync: "/scram/scramjet.sync.js",
+        },
+      });
+      await controller.init();
+      window.__scramjetController = controller;
+      return controller;
+    })();
+  }
+  return scramjetReady;
+}
+
+async function repairScramjetDb() {
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const result = await new Promise((resolve) => {
+      const open = indexedDB.open("$scramjet", 1);
+      let done = false;
+      const finish = (v) => { if (!done) { done = true; resolve(v); } };
+      open.onsuccess = () => {
+        const db = open.result;
+        if (
+          db.objectStoreNames.contains("config") &&
+          db.objectStoreNames.contains("cookies")
+        ) {
+          db.close();
+          finish("ok");
+          return;
+        }
+        db.close();
+        const del = indexedDB.deleteDatabase("$scramjet");
+        del.onsuccess = () => finish("deleted");
+        del.onerror = () => finish("error");
+        setTimeout(() => finish("blocked"), 700);
+      };
+      open.onerror = () => finish("open-error");
+      open.onblocked = () => finish("open-blocked");
+    });
+    if (result === "ok" || result === "deleted") return;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+}
+
+let baremuxReady = null;
+async function ensureBareMux() {
+  if (!baremuxReady) {
+    baremuxReady = (async () => {
+      localStorage.setItem("bare-mux-path", "/baremux/worker.js");
+      const mod = await import("/baremux/index.mjs");
+      const baremux = new mod.BareMuxConnection("/baremux/worker.js");
+      const t = await getTransport();
+      if ((await baremux.getTransport()) !== t.path) {
+        await baremux.setTransport(t.path, t.args);
+      }
+      return baremux;
+    })();
+  }
+  return baremuxReady;
 }
 
 const homeView = document.getElementById("home-view");
@@ -169,19 +283,63 @@ async function openBrowser(rawInput, engineTemplate) {
   const url = search(rawInput, engineTemplate);
 
   lastUrl = url;
-  frame.src = __site$config.prefix + __site$config.encodeUrl(url);
   browserAddress.value = url;
 
-  homeView.classList.add("hidden");
-  browserView.classList.remove("hidden");
-  window.scrollTo(0, 0);
+  if (/^(blob|data|about|javascript|file):/i.test(url)) {
+    frame.src = url;
+    homeView.classList.add("hidden");
+    browserView.classList.remove("hidden");
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  if (settingsMode() === "scramjet") {
+    try {
+      await registerSW();
+      await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch (e) {}
+    try {
+      await ensureScramjet();
+      await ensureBareMux();
+      const controller = window.__scramjetController;
+      frame.src = controller.encodeUrl(url);
+      homeView.classList.add("hidden");
+      browserView.classList.remove("hidden");
+      window.scrollTo(0, 0);
+    } catch (e) {
+      console.error("scramjet failed, falling back to UV", e);
+      uvFallback = true;
+      try {
+        await ensureTransport();
+      } catch (e2) {}
+      frame.src = __site$config.prefix + __site$config.encodeUrl(url);
+      homeView.classList.add("hidden");
+      browserView.classList.remove("hidden");
+      window.scrollTo(0, 0);
+    }
+    return;
+  }
 
   try {
     await registerSW();
   } catch (e) {}
   try {
+    await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((r) => setTimeout(r, 3000)),
+    ]);
+  } catch (e) {}
+  try {
     await ensureTransport();
   } catch (e) {}
+
+  frame.src = __site$config.prefix + __site$config.encodeUrl(url);
+  homeView.classList.add("hidden");
+  browserView.classList.remove("hidden");
+  window.scrollTo(0, 0);
 }
 
 function closeBrowser() {

@@ -5,6 +5,7 @@ window.ARX = window.ARX || {};
     engine: "ddg",
     home: "https://www.google.com",
     transport: "bare",
+    proxyUrl: "",
     cloak: "default",
   };
   var ENGINES = {
@@ -32,7 +33,6 @@ window.ARX = window.ARX || {};
     var s = {};
     try { s = JSON.parse(localStorage.getItem("arx-settings") || "{}"); } catch (e) {}
     if (s.cloak === "crestview") s.cloak = "default";
-    if (s.transport === "auto") s.transport = "bare";
     var out = {};
     for (var k in DEFAULTS) out[k] = s[k] !== undefined ? s[k] : DEFAULTS[k];
     return out;
@@ -52,6 +52,7 @@ window.ARX = window.ARX || {};
   function engineTemplate() { return ENGINES[load().engine]; }
   function homeUrl() { return load().home; }
   function transportMode() { return load().transport; }
+  function transportUrl() { return load().proxyUrl; }
   function cloakName() { return load().cloak; }
 
   function topDoc() {
@@ -114,6 +115,7 @@ window.ARX = window.ARX || {};
     engineTemplate: engineTemplate,
     homeUrl: homeUrl,
     transportMode: transportMode,
+    transportUrl: transportUrl,
     cloakName: cloakName,
     applyCloak: applyCloak,
     aboutBlank: aboutBlank,
@@ -122,9 +124,17 @@ window.ARX = window.ARX || {};
   var engineSel = document.getElementById("set-engine");
   var homeSel = document.getElementById("set-home");
   var transportSel = document.getElementById("set-transport");
+  var transportUrlInput = document.getElementById("set-transport-url");
+  var transportCustomRow = document.getElementById("transport-custom-row");
   var cloakSel = document.getElementById("set-cloak");
   var modal = document.getElementById("settings-modal");
   var navEngine = document.getElementById("nav-engine");
+
+  function syncTransportRow() {
+    if (!transportCustomRow || !transportUrlInput) return;
+    transportCustomRow.classList.toggle("hidden", transportSel.value !== "custom");
+    if (transportSel.value === "custom") transportUrlInput.value = transportUrl();
+  }
 
   if (engineSel) {
     engineSel.value = engineKey();
@@ -139,7 +149,10 @@ window.ARX = window.ARX || {};
   }
   if (transportSel) {
     transportSel.value = transportMode();
-    transportSel.addEventListener("change", function () { set({ transport: transportSel.value }); });
+    transportSel.addEventListener("change", function () { set({ transport: transportSel.value }); syncTransportRow(); });
+  }
+  if (transportUrlInput) {
+    transportUrlInput.addEventListener("change", function () { set({ proxyUrl: transportUrlInput.value.trim() }); });
   }
   if (cloakSel) {
     cloakSel.value = cloakName();
@@ -155,6 +168,7 @@ window.ARX = window.ARX || {};
     if (homeSel) homeSel.value = homeUrl();
     if (transportSel) transportSel.value = transportMode();
     if (cloakSel) cloakSel.value = cloakName();
+    syncTransportRow();
   });
   if (closeBtn) closeBtn.addEventListener("click", function () { modal.classList.add("hidden"); });
   if (resetBtn) resetBtn.addEventListener("click", function () {
@@ -164,6 +178,8 @@ window.ARX = window.ARX || {};
     if (transportSel) transportSel.value = "bare";
     if (cloakSel) cloakSel.value = "default";
     if (navEngine) navEngine.value = ENGINES.ddg;
+    if (transportUrlInput) transportUrlInput.value = "";
+    syncTransportRow();
     applyCloak();
   });
   if (blankBtn) blankBtn.addEventListener("click", aboutBlank);
