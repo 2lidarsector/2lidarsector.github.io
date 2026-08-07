@@ -116,23 +116,66 @@ navigator.serviceWorker.addEventListener(
 );
 
 let transportPromise = null;
+let wispProbe = null;
 
 function settingsMode() {
   return window.ARX && ARX.settings ? ARX.settings.transportMode() : "auto";
+}
+
+function probeWisp(wsUrl) {
+  if (wispProbe) return wispProbe;
+  wispProbe = new Promise((resolve) => {
+    let settled = false;
+    const done = (ok) => {
+      if (settled) return;
+      settled = true;
+      resolve(ok);
+    };
+    try {
+      const probe = new WebSocket(wsUrl);
+      const timer = setTimeout(() => {
+        try { probe.close(); } catch (e) {}
+        done(false);
+      }, 3000);
+      probe.onopen = () => {
+        clearTimeout(timer);
+        try { probe.close(); } catch (e) {}
+        done(true);
+      };
+      probe.onerror = () => {
+        clearTimeout(timer);
+        done(false);
+      };
+      probe.onclose = () => {
+        clearTimeout(timer);
+        done(false);
+      };
+    } catch (e) {
+      done(false);
+    }
+  });
+  return wispProbe;
 }
 
 async function getTransport() {
   if (transportPromise) return transportPromise;
   transportPromise = (async () => {
     const mode = settingsMode();
-    if (mode === "wisp") {
-      const wsUrl =
-        (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/stream/";
-      return { path: "/net/index.mjs", args: [{ wisp: wsUrl }] };
-    }
-    if (mode === "bare") {
+    const sameOriginWisp =
+      (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/stream/";
+    const bareFallback = () => {
       const bare = config.bareServers.length ? config.bareServers[0] : "/remote/";
       return { path: "/lib/remote-client.mjs", args: [new URL(bare, location.href).toString()] };
+    };
+    if (mode === "wisp") {
+      if (await probeWisp(sameOriginWisp)) {
+        return { path: "/net/index.mjs", args: [{ wisp: sameOriginWisp }] };
+      }
+      console.warn("[arxx] wisp unavailable on this host, falling back to bare");
+      return bareFallback();
+    }
+    if (mode === "bare") {
+      return bareFallback();
     }
     if (mode === "custom") {
       const custom = (window.ARX && ARX.settings ? ARX.settings.transportUrl() : "").trim();
@@ -150,15 +193,15 @@ async function getTransport() {
       hasBackend = await fetch("/__status__", { cache: "no-store" }).then((r) => r.ok);
     } catch (e) {}
     if (hasBackend) {
-      const wsUrl =
-        (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/stream/";
-      return { path: "/net/index.mjs", args: [{ wisp: wsUrl }] };
+      if (await probeWisp(sameOriginWisp)) {
+        return { path: "/net/index.mjs", args: [{ wisp: sameOriginWisp }] };
+      }
+      return bareFallback();
     }
     if (config.wsUrl) {
       return { path: "/net/index.mjs", args: [{ wisp: config.wsUrl }] };
     }
-    const bare = config.bareServers.length ? config.bareServers[0] : "/remote/";
-    return { path: "/lib/remote-client.mjs", args: [new URL(bare, location.href).toString()] };
+    return bareFallback();
   })();
   return transportPromise;
 }
