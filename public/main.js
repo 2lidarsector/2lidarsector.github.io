@@ -83,7 +83,7 @@ const library = [
   },
   {
     name: "Web Dashers",
-    desc: "A modded Geometry Dash demo with level search and a level editor.",
+    desc: "A fan-made rhythm platformer with main levels, level search, and a built-in level editor.",
     path: "/apps/web-dashers/",
     tag: "Platformer",
     grad: ["#c1fb3d", "#16a34a"],
