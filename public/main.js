@@ -105,7 +105,7 @@ const library = [
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="22" y="14" width="56" height="72" rx="8" fill="#fff" stroke="#7f1d1d" stroke-width="4"/><path d="M50 30l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="#ef4444"/><circle cx="32" cy="26" r="3" fill="#7f1d1d"/><circle cx="68" cy="74" r="3" fill="#7f1d1d"/></svg>',
   },
   {
-    name: "Astra Client",
+    name: "Atlas Studio",
     desc: "A high-performance WASM client with friends, private messaging, and schematics.",
     path: "/apps/astra/",
     tag: "3D",
