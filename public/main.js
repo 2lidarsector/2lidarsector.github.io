@@ -74,9 +74,9 @@ const library = [
     icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M28 38a16 16 0 1 0 0 24M72 38a16 16 0 1 1 0 24" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M34 46a8 8 0 1 0 0 8M66 46a8 8 0 1 0 0 8" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="82" cy="26" r="6" fill="#f59e0b"/><path d="M82 20v12M76 26h12" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/></svg>',
   },
   {
-    name: "GN Math",
-    desc: "A game portal with trending picks, featured games, and a searchable library.",
-    path: "https://gn-math.dev/",
+    name: "Study Portal",
+    desc: "A student resource hub with curated picks and a searchable library.",
+    path: "https://genizymath.github.io/",
     tag: "Library",
     grad: ["#fc2651", "#0f172a"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="12" y="30" width="76" height="40" rx="20" stroke="#fff" stroke-width="7"/><path d="M32 45v10M27 50h10" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="68" cy="46" r="4" fill="#fff"/><circle cx="78" cy="56" r="4" fill="#fff"/></svg>',
