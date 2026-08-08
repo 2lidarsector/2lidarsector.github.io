@@ -104,6 +104,16 @@ const library = [
     grad: ["#f43f5e", "#7f1d1d"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="22" y="14" width="56" height="72" rx="8" fill="#fff" stroke="#7f1d1d" stroke-width="4"/><path d="M50 30l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="#ef4444"/><circle cx="32" cy="26" r="3" fill="#7f1d1d"/><circle cx="68" cy="74" r="3" fill="#7f1d1d"/></svg>',
   },
+  {
+    name: "Astra Client",
+    desc: "A high-performance WASM client with friends, private messaging, and schematics.",
+    path: "/apps/astra/",
+    tag: "3D",
+    cloak: "docs",
+    grad: ["#6d7df6", "#2dd4bf"],
+    download: "/apps/astra/index.html",
+    icon: '<svg viewBox="0 0 100 100" fill="none"><path d="M50 8l12 30 30 12-30 12-12 30-12-30-30-12 30-12z" fill="#fff"/><circle cx="50" cy="50" r="9" fill="#6d7df6"/></svg>',
+  },
 ];
 
 const CUSTOM_KEY = "arx-custom-games";
@@ -504,17 +514,20 @@ function cardHtml(g) {
     ? g.icon
     : `<span class="thumb-emoji">${g.emoji ? esc(g.emoji) : "&#127918;"}</span>`;
   return `
-    <a class="app-card${g.custom ? " custom-card" : ""}" href="${esc(g.path)}" data-cloak="${esc(g.cloak || "")}">
-      ${g.custom ? `<button class="card-remove" title="Remove game" data-remove="${esc(g.name)}">&#10005;</button>` : ""}
-      <div class="app-thumb" style="background: linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})">
-        ${thumb}
-      </div>
-      <div class="app-info">
-        <h3>${esc(g.name)}</h3>
-        <p>${esc(g.desc || "Your custom game.")}</p>
-        <span class="app-tag">${esc(g.tag || "Custom")}</span>
-      </div>
-    </a>`;
+    <div class="app-card-wrap${g.custom ? " custom-card" : ""}">
+      <a class="app-card" href="${esc(g.path)}" data-cloak="${esc(g.cloak || "")}">
+        ${g.custom ? `<button class="card-remove" title="Remove game" data-remove="${esc(g.name)}">&#10005;</button>` : ""}
+        <div class="app-thumb" style="background: linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})">
+          ${thumb}
+        </div>
+        <div class="app-info">
+          <h3>${esc(g.name)}</h3>
+          <p>${esc(g.desc || "Your custom game.")}</p>
+          <span class="app-tag">${esc(g.tag || "Custom")}</span>
+        </div>
+      </a>
+      ${g.download ? `<a class="card-download" href="${esc(g.download)}" download="${esc(g.name + ".html")}" title="Download ${esc(g.name)}">&#11015;</a>` : ""}
+    </div>`;
 }
 
 function renderLibrary() {
@@ -732,6 +745,11 @@ document.getElementById("library-grid").addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     removeCustomGame(rm.getAttribute("data-remove"));
+    return;
+  }
+  const dl = e.target.closest("a.card-download");
+  if (dl) {
+    e.stopPropagation();
     return;
   }
   const card = e.target.closest("a.app-card");
