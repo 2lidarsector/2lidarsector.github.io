@@ -735,3 +735,293 @@ a {
     scroll-behavior: auto;
   }
 }
+
+/* ================= Tab bar ================= */
+
+.tab-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 10px 16px 0;
+  background: rgba(15, 18, 29, 0.9);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.tab-bar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 210px;
+  flex-shrink: 0;
+  padding: 7px 8px 7px 14px;
+  border-radius: 10px 10px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tab:hover {
+  color: var(--dim);
+  background: var(--surface-2);
+}
+
+.tab.active {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+
+.tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.tab-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 6px;
+}
+
+.tab-close:hover {
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.14);
+}
+
+/* ================= Custom game cards ================= */
+
+.custom-card {
+  position: relative;
+}
+
+.card-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(10, 12, 20, 0.7);
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+.custom-card:hover .card-remove {
+  opacity: 1;
+}
+
+.card-remove:hover {
+  color: #fff;
+  background: var(--danger);
+}
+
+.thumb-emoji {
+  font-size: 46px;
+  line-height: 1;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+
+.library-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* ================= Add game modal ================= */
+
+#add-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 12, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+#add-modal.hidden {
+  display: none;
+}
+
+/* ================= Panic overlay ================= */
+
+#panic-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #fff;
+  overflow: auto;
+}
+
+.panic-google {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  background: #fff;
+  padding: 40px 20px;
+}
+
+.panic-search {
+  width: min(560px, 92vw);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  border: 1px solid #dfe1e5;
+  border-radius: 999px;
+  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+  transition: box-shadow 0.15s;
+}
+
+.panic-search:focus-within {
+  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.4);
+}
+
+.panic-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+  color: #202124;
+}
+
+.panic-search button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 17px;
+  color: #4285f4;
+  padding: 2px 4px;
+}
+
+.panic-sub {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.panic-sub a {
+  color: #1a0dab;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+  text-decoration: none;
+}
+
+.panic-sub a:hover {
+  text-decoration: underline;
+}
+
+.panic-canvas {
+  display: flex;
+  min-height: 100%;
+  background: #fff;
+  color: #2d3b45;
+  font-family: Arial, sans-serif;
+}
+
+.panic-sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  background: #1f3b57;
+  color: #fff;
+  padding: 22px 14px;
+}
+
+.panic-sidebar h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 20px 8px;
+}
+
+.sidebar-item {
+  font-size: 13px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.sidebar-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-weight: 600;
+}
+
+.panic-main {
+  flex: 1;
+  padding: 28px 34px;
+  min-width: 0;
+}
+
+.panic-main h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #2d3b45;
+  margin: 0 0 20px;
+}
+
+.panic-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.panic-card {
+  border: 1px solid #e2e5e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f7f8f9;
+  font-size: 12.5px;
+  color: #5b6770;
+}
+
+.panic-card b {
+  display: block;
+  color: #2d3b45;
+  font-size: 13.5px;
+  margin-bottom: 5px;
+}
+
+.panic-card p {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .panic-sidebar {
+    display: none;
+  }
+}

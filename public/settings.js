@@ -8,6 +8,8 @@ window.ARX = window.ARX || {};
     proxyUrl: "",
     cloak: "default",
     theme: "midnight",
+    openMode: "embed",
+    panic: "google",
   };
   var ENGINES = {
     google: "https://www.google.com/search?q=%s",
@@ -28,6 +30,30 @@ window.ARX = window.ARX || {};
       title: "Google",
       icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='white'/><path d='M82 51c0-2.5-.2-5-.7-7.3H51v13.8h17.5c-.7 3.9-3 7.2-6.4 9.4v7.8h10.4c6.1-5.6 9.5-13.9 9.5-23.7Z' fill='%234285F4'/><path d='M51 84c8.6 0 15.9-2.9 21.2-7.8l-10.4-7.8c-2.9 2-6.6 3.1-10.8 3.1-8.3 0-15.3-5.6-17.8-13.2H22.6v8.1C28 75.7 38.7 84 51 84Z' fill='%2334A853'/><path d='M33.2 58.3c-.6-1.9-1-3.9-1-6.3s.4-4.4 1-6.3v-8.1H22.6c-2.1 4.2-3.6 9.1-3.6 14.4s1.5 10.2 3.6 14.4l10.6-8.1Z' fill='%23FBBC05'/><path d='M51 31.5c4.7 0 8.9 1.6 12.2 4.8l9.1-9.1C66.9 21.6 59.6 18.5 51 18.5c-12.3 0-23 8.4-28.4 20.1l10.6 8.1c2.5-7.6 9.5-13.2 17.8-13.2Z' fill='%23EA4335'/></svg>",
     },
+    canvas: {
+      title: "Canvas",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23D41F30'/><path d='M31 30c9-8 24-9 36-4 13 6 19 20 15 33-4 12-15 19-27 19-10 0-18-6-18-16 0-8 6-13 13-13 6 0 12 4 12 10 0 5-4 8-8 8' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>",
+    },
+    khan: {
+      title: "Khan Academy",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231865F2'/><path d='M26 80c7-26 24-41 50-47' stroke='%2314BF96' stroke-width='9' fill='none' stroke-linecap='round'/><path d='M78 33L52 47l10-18z' fill='white'/></svg>",
+    },
+    desmos: {
+      title: "Desmos",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='white'/><path d='M18 78L50 22l32 56' stroke='%2300A2C0' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/><circle cx='50' cy='64' r='7' fill='%2300A2C0'/></svg>",
+    },
+    classroom: {
+      title: "Google Classroom",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='white'/><path d='M16 20h30v26H16z' fill='%234285F4'/><path d='M54 20h30v26H54z' fill='%23EA4335'/><path d='M16 54h30v26H16z' fill='%23FBBC05'/><path d='M54 54h30v26H54z' fill='%2334A853'/></svg>",
+    },
+    ixl: {
+      title: "IXL",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%233B6EF5'/><path d='M50 16v68M50 16L32 44M50 16l18 28M50 84L32 56M50 84l18-28' stroke='white' stroke-width='8' fill='none' stroke-linecap='round'/></svg>",
+    },
+    deltamath: {
+      title: "DeltaMath",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230B5394'/><path d='M22 74L50 24l28 50z' fill='none' stroke='white' stroke-width='8' stroke-linejoin='round'/><path d='M50 24v50' stroke='white' stroke-width='6' opacity='0.65'/></svg>",
+    },
   };
 
   var THEME_BASES = {
@@ -38,6 +64,11 @@ window.ARX = window.ARX || {};
     sunset: { bg: "#1a0a10", surface: "#281218", surface2: "#331a21", card: "#3a1f27", accent: "#fb7185", accent2: "#fbbf24", text: "#fdeef1" },
     graphite: { bg: "#0b0c0e", surface: "#121316", surface2: "#17181c", card: "#1a1b20", accent: "#94a3b8", accent2: "#e2e8f0", text: "#eef0f4" },
     paper: { bg: "#f3f4f7", surface: "#ffffff", surface2: "#eceef2", card: "#ffffff", accent: "#4f5bd5", accent2: "#0d9488", text: "#1a1d26" },
+    khan: { bg: "#f6f9ff", surface: "#ffffff", surface2: "#eef3fc", card: "#ffffff", accent: "#1865f2", accent2: "#14bf96", text: "#1f2937" },
+    desmos: { bg: "#f2faf9", surface: "#ffffff", surface2: "#e6f6f4", card: "#ffffff", accent: "#00a2c0", accent2: "#0d9488", text: "#12363e" },
+    canvas: { bg: "#f4f4f2", surface: "#ffffff", surface2: "#ececea", card: "#ffffff", accent: "#1f3b57", accent2: "#d41f30", text: "#1f2937" },
+    ixl: { bg: "#f2f6ff", surface: "#ffffff", surface2: "#e8efff", card: "#ffffff", accent: "#3b6ef5", accent2: "#8b5cf6", text: "#1c2a4a" },
+    deltamath: { bg: "#eef4fb", surface: "#ffffff", surface2: "#e4edf7", card: "#ffffff", accent: "#0b5394", accent2: "#1a9e6f", text: "#1a2740" },
   };
 
   function hexRgb(hex) {
@@ -143,6 +174,8 @@ window.ARX = window.ARX || {};
   function cloakName() { return load().cloak; }
   function themeName() { return load().theme; }
   function themeCustom() { return load().themeCustom || {}; }
+  function openMode() { return load().openMode; }
+  function panicTarget() { return load().panic; }
 
   function topDoc() {
     try {
@@ -152,8 +185,8 @@ window.ARX = window.ARX || {};
     }
   }
 
-  function applyCloak() {
-    var c = CLOAKS[cloakName()] || CLOAKS.default;
+  function applyCloakName(name) {
+    var c = CLOAKS[name] || CLOAKS.default;
     var doc = topDoc();
     doc.title = c.title;
     var link = doc.querySelector('link[rel="icon"]');
@@ -163,6 +196,10 @@ window.ARX = window.ARX || {};
       doc.head.appendChild(link);
     }
     link.href = c.icon;
+  }
+
+  function applyCloak() {
+    applyCloakName(cloakName());
   }
 
   function aboutBlank() {
@@ -250,9 +287,12 @@ window.ARX = window.ARX || {};
     transportUrl: transportUrl,
     cloakName: cloakName,
     applyCloak: applyCloak,
+    applyCloakName: applyCloakName,
     themeName: themeName,
     themeCustom: themeCustom,
     applyTheme: applyTheme,
+    openMode: openMode,
+    panicTarget: panicTarget,
     aboutBlank: aboutBlank,
     blobTab: blobTab,
   };
@@ -269,6 +309,8 @@ window.ARX = window.ARX || {};
   var themeAccent = document.getElementById("set-theme-accent");
   var themeAccent2 = document.getElementById("set-theme-accent2");
   var themeText = document.getElementById("set-theme-text");
+  var openModeSel = document.getElementById("set-open-mode");
+  var panicSel = document.getElementById("set-panic");
   var modal = document.getElementById("settings-modal");
   var navEngine = document.getElementById("nav-engine");
 
@@ -316,6 +358,14 @@ window.ARX = window.ARX || {};
     themeSel.value = themeName();
     themeSel.addEventListener("change", function () { set({ theme: themeSel.value }); syncThemeRow(); applyTheme(); });
   }
+  if (openModeSel) {
+    openModeSel.value = openMode();
+    openModeSel.addEventListener("change", function () { set({ openMode: openModeSel.value }); });
+  }
+  if (panicSel) {
+    panicSel.value = panicTarget();
+    panicSel.addEventListener("change", function () { set({ panic: panicSel.value }); });
+  }
   var themeInputs = [
     [themeBg, "bg"],
     [themeAccent, "accent"],
@@ -345,6 +395,8 @@ window.ARX = window.ARX || {};
     if (transportSel) transportSel.value = transportMode();
     if (cloakSel) cloakSel.value = cloakName();
     if (themeSel) themeSel.value = themeName();
+    if (openModeSel) openModeSel.value = openMode();
+    if (panicSel) panicSel.value = panicTarget();
     syncTransportRow();
     syncThemeRow();
   });
@@ -356,6 +408,8 @@ window.ARX = window.ARX || {};
     if (transportSel) transportSel.value = "bare";
     if (cloakSel) cloakSel.value = "default";
     if (themeSel) themeSel.value = "midnight";
+    if (openModeSel) openModeSel.value = "embed";
+    if (panicSel) panicSel.value = "google";
     if (navEngine) navEngine.value = ENGINES.ddg;
     if (transportUrlInput) transportUrlInput.value = "";
     syncTransportRow();

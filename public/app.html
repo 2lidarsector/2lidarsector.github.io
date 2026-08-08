@@ -53,21 +53,26 @@
           <h2>Library</h2>
           <p class="section-sub">All apps run right in your browser. No downloads.</p>
         </div>
+        <div class="library-actions">
+          <button class="settings-btn" id="btn-add-game" title="Add your own game">&#43; Add game</button>
+        </div>
       </div>
       <div class="library-grid" id="library-grid"></div>
     </section>
   </main>
 
   <main id="browser-view" class="hidden">
+    <div class="tab-bar" id="tab-bar"></div>
     <div class="browser-toolbar">
       <button class="browser-btn" id="btn-back" title="Back">&#8592;</button>
       <button class="browser-btn" id="btn-forward" title="Forward">&#8594;</button>
       <button class="browser-btn" id="btn-reload" title="Reload">&#8635;</button>
       <button class="browser-btn" id="btn-home" title="Home">&#8962;</button>
+      <button class="browser-btn" id="btn-new-tab" title="New tab">&#43;</button>
       <form class="browser-address" id="browser-form">
         <input type="text" id="browser-address-input" placeholder="Search the web or enter a URL..." autocomplete="off" spellcheck="false" />
       </form>
-      <button class="browser-btn" id="btn-exit" title="Close browser">&#10005;</button>
+      <button class="browser-btn" id="btn-exit" title="Close all tabs">&#10005;</button>
     </div>
     <iframe id="frame" class="browser-frame" title="Browser"></iframe>
   </main>
@@ -112,6 +117,12 @@
           <option value="default">MathLab</option>
           <option value="docs">Google Docs</option>
           <option value="google">Google Search</option>
+          <option value="canvas">Canvas</option>
+          <option value="khan">Khan Academy</option>
+          <option value="desmos">Desmos</option>
+          <option value="classroom">Google Classroom</option>
+          <option value="ixl">IXL</option>
+          <option value="deltamath">DeltaMath</option>
         </select>
       </div>
       <div class="settings-row">
@@ -124,7 +135,26 @@
           <option value="sunset">Sunset</option>
           <option value="graphite">Graphite</option>
           <option value="paper">Paper</option>
+          <option value="khan">Khan Academy</option>
+          <option value="desmos">Desmos</option>
+          <option value="canvas">Canvas</option>
+          <option value="ixl">IXL</option>
+          <option value="deltamath">DeltaMath</option>
           <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label for="set-open-mode">Open games in</label>
+        <select id="set-open-mode">
+          <option value="embed">Tabs (embed)</option>
+          <option value="tab">New browser tab</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label for="set-panic">Panic page (Esc)</label>
+        <select id="set-panic">
+          <option value="google">Google</option>
+          <option value="canvas">Canvas</option>
         </select>
       </div>
       <div class="settings-row hidden" id="theme-custom-row">
@@ -142,7 +172,77 @@
         <button class="settings-btn" id="btn-settings-reset">Reset</button>
         <button class="settings-btn primary" id="btn-settings-close">Done</button>
       </div>
-      <p class="settings-note">Tab name and icon are applied to this browser tab.</p>
+      <p class="settings-note">Press Esc to show or hide the panic page. Disguise and themes apply to this browser tab.</p>
+    </div>
+  </div>
+
+  <div id="add-modal" class="hidden">
+    <div class="settings-panel">
+      <h2>Add a game</h2>
+      <div class="settings-row">
+        <label for="add-name">Name</label>
+        <input type="text" id="add-name" placeholder="e.g. My Game" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="settings-row">
+        <label for="add-url">URL</label>
+        <input type="text" id="add-url" placeholder="https://example.com or /apps/my-game/" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="settings-row">
+        <label for="add-icon">Emoji icon</label>
+        <input type="text" id="add-icon" placeholder="&#127918;" maxlength="4" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="settings-row">
+        <label for="add-grad">Color</label>
+        <select id="add-grad"></select>
+      </div>
+      <div class="settings-row">
+        <label for="add-cloak">Tab disguise</label>
+        <select id="add-cloak"></select>
+      </div>
+      <div class="settings-actions">
+        <button class="settings-btn" id="btn-add-cancel">Cancel</button>
+        <button class="settings-btn primary" id="btn-add-save">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="panic-overlay" class="hidden">
+    <div class="panic-google hidden" id="panic-google">
+      <svg viewBox="0 0 100 100" width="110" height="110" aria-hidden="true">
+        <path d="M82 51c0-2.5-.2-5-.7-7.3H51v13.8h17.5c-.7 3.9-3 7.2-6.4 9.4v7.8h10.4c6.1-5.6 9.5-13.9 9.5-23.7Z" fill="#4285F4"/>
+        <path d="M51 84c8.6 0 15.9-2.9 21.2-7.8l-10.4-7.8c-2.9 2-6.6 3.1-10.8 3.1-8.3 0-15.3-5.6-17.8-13.2H22.6v8.1C28 75.7 38.7 84 51 84Z" fill="#34A853"/>
+        <path d="M33.2 58.3c-.6-1.9-1-3.9-1-6.3s.4-4.4 1-6.3v-8.1H22.6c-2.1 4.2-3.6 9.1-3.6 14.4s1.5 10.2 3.6 14.4l10.6-8.1Z" fill="#FBBC05"/>
+        <path d="M51 31.5c4.7 0 8.9 1.6 12.2 4.8l9.1-9.1C66.9 21.6 59.6 18.5 51 18.5c-12.3 0-23 8.4-28.4 20.1l10.6 8.1c2.5-7.6 9.5-13.2 17.8-13.2Z" fill="#EA4335"/>
+      </svg>
+      <form class="panic-search" id="panic-form" autocomplete="off">
+        <input type="text" id="panic-search" placeholder="Search Google or type a URL" spellcheck="false" />
+        <button type="submit" title="Google Search">&#128269;</button>
+      </form>
+      <div class="panic-sub">
+        <a href="https://www.google.com">Gmail</a>
+        <a href="https://www.google.com">Images</a>
+        <a href="https://www.youtube.com">YouTube</a>
+        <a href="https://www.google.com/maps">Maps</a>
+      </div>
+    </div>
+    <div class="panic-canvas hidden" id="panic-canvas">
+      <div class="panic-sidebar">
+        <h3>canvas</h3>
+        <div class="sidebar-item active">Dashboard</div>
+        <div class="sidebar-item">Courses</div>
+        <div class="sidebar-item">Assignments</div>
+        <div class="sidebar-item">Grades</div>
+        <div class="sidebar-item">Calendar</div>
+      </div>
+      <div class="panic-main">
+        <h2>Dashboard</h2>
+        <div class="panic-cards">
+          <div class="panic-card"><b>Algebra 1</b><p>Unit 5: Quadratic functions</p></div>
+          <div class="panic-card"><b>Geometry</b><p>Unit 3: Geometric proofs</p></div>
+          <div class="panic-card"><b>Precalculus</b><p>Unit 2: Trigonometry</p></div>
+          <div class="panic-card"><b>Study Hall</b><p>Announcements</p></div>
+        </div>
+      </div>
     </div>
   </div>
 
