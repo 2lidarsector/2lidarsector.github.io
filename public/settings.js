@@ -10,6 +10,7 @@ window.ARX = window.ARX || {};
     theme: "midnight",
     openMode: "embed",
     panic: "google",
+    panicKey: "`",
   };
   var ENGINES = {
     google: "https://www.google.com/search?q=%s",
@@ -176,6 +177,34 @@ window.ARX = window.ARX || {};
   function themeCustom() { return load().themeCustom || {}; }
   function openMode() { return load().openMode; }
   function panicTarget() { return load().panic; }
+  function panicKey() { return load().panicKey || "`"; }
+
+  function comboFromEvent(e) {
+    if (
+      e.key === "Control" ||
+      e.key === "Alt" ||
+      e.key === "Shift" ||
+      e.key === "Meta" ||
+      e.key === "Dead"
+    )
+      return null;
+    var mods = [];
+    if (e.ctrlKey) mods.push("ctrl");
+    if (e.altKey) mods.push("alt");
+    if (e.shiftKey) mods.push("shift");
+    if (e.metaKey) mods.push("meta");
+    mods.push(e.key.toLowerCase());
+    return mods.join("+");
+  }
+
+  function formatKey(combo) {
+    return String(combo || "")
+      .split("+")
+      .map(function (k) {
+        return k.length === 1 ? k : k.charAt(0).toUpperCase() + k.slice(1);
+      })
+      .join("+");
+  }
 
   function topDoc() {
     try {
@@ -293,6 +322,9 @@ window.ARX = window.ARX || {};
     applyTheme: applyTheme,
     openMode: openMode,
     panicTarget: panicTarget,
+    panicKey: panicKey,
+    comboFromEvent: comboFromEvent,
+    formatKey: formatKey,
     aboutBlank: aboutBlank,
     blobTab: blobTab,
   };
@@ -311,6 +343,10 @@ window.ARX = window.ARX || {};
   var themeText = document.getElementById("set-theme-text");
   var openModeSel = document.getElementById("set-open-mode");
   var panicSel = document.getElementById("set-panic");
+  var panicKeyInput = document.getElementById("set-panic-key");
+  var configExportBtn = document.getElementById("btn-config-export");
+  var configImportBtn = document.getElementById("btn-config-import");
+  var configFileInput = document.getElementById("config-file-input");
   var modal = document.getElementById("settings-modal");
   var navEngine = document.getElementById("nav-engine");
 
@@ -366,6 +402,61 @@ window.ARX = window.ARX || {};
     panicSel.value = panicTarget();
     panicSel.addEventListener("change", function () { set({ panic: panicSel.value }); });
   }
+  if (panicKeyInput) {
+    panicKeyInput.value = formatKey(panicKey());
+    panicKeyInput.addEventListener("keydown", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var combo = comboFromEvent(e);
+      if (!combo) return;
+      set({ panicKey: combo });
+      panicKeyInput.value = formatKey(combo);
+    });
+  }
+  function exportConfig() {
+    var custom = [];
+    try { custom = JSON.parse(localStorage.getItem("arx-custom-games") || "[]"); } catch (e) {}
+    var data = {
+      exportedAt: new Date().toISOString(),
+      settings: load(),
+      customGames: Array.isArray(custom) ? custom : [],
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "arx-config.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  function importConfig(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(reader.result);
+        if (data.settings && typeof data.settings === "object") {
+          localStorage.setItem("arx-settings", JSON.stringify(data.settings));
+        }
+        if (data.customGames && Array.isArray(data.customGames)) {
+          localStorage.setItem("arx-custom-games", JSON.stringify(data.customGames));
+        }
+        location.reload();
+      } catch (e) {
+        alert("Invalid config file.");
+      }
+    };
+    reader.readAsText(file);
+  }
+  if (configExportBtn) configExportBtn.addEventListener("click", exportConfig);
+  if (configImportBtn) configImportBtn.addEventListener("click", function () {
+    if (configFileInput) configFileInput.click();
+  });
+  if (configFileInput) configFileInput.addEventListener("change", function () {
+    if (configFileInput.files && configFileInput.files[0]) importConfig(configFileInput.files[0]);
+    configFileInput.value = "";
+  });
   var themeInputs = [
     [themeBg, "bg"],
     [themeAccent, "accent"],
@@ -397,6 +488,7 @@ window.ARX = window.ARX || {};
     if (themeSel) themeSel.value = themeName();
     if (openModeSel) openModeSel.value = openMode();
     if (panicSel) panicSel.value = panicTarget();
+    if (panicKeyInput) panicKeyInput.value = formatKey(panicKey());
     syncTransportRow();
     syncThemeRow();
   });
@@ -410,6 +502,7 @@ window.ARX = window.ARX || {};
     if (themeSel) themeSel.value = "midnight";
     if (openModeSel) openModeSel.value = "embed";
     if (panicSel) panicSel.value = "google";
+    if (panicKeyInput) panicKeyInput.value = formatKey("`");
     if (navEngine) navEngine.value = ENGINES.ddg;
     if (transportUrlInput) transportUrlInput.value = "";
     syncTransportRow();

@@ -151,11 +151,15 @@
         </select>
       </div>
       <div class="settings-row">
-        <label for="set-panic">Panic page (Esc)</label>
+        <label for="set-panic">Panic page</label>
         <select id="set-panic">
           <option value="google">Google</option>
           <option value="canvas">Canvas</option>
         </select>
+      </div>
+      <div class="settings-row">
+        <label for="set-panic-key">Panic key</label>
+        <input type="text" id="set-panic-key" readonly placeholder="Click and press a key" autocomplete="off" spellcheck="false" />
       </div>
       <div class="settings-row hidden" id="theme-custom-row">
         <label for="set-theme-bg">Custom colors</label>
@@ -169,10 +173,13 @@
       <div class="settings-actions">
         <button class="settings-btn" id="btn-aboutblank">Open blank tab</button>
         <button class="settings-btn" id="btn-blobtab">Blob tab</button>
+        <button class="settings-btn" id="btn-config-export">Export config</button>
+        <button class="settings-btn" id="btn-config-import">Import config</button>
+        <input type="file" id="config-file-input" accept="application/json,.json" class="hidden" />
         <button class="settings-btn" id="btn-settings-reset">Reset</button>
         <button class="settings-btn primary" id="btn-settings-close">Done</button>
       </div>
-      <p class="settings-note">Press Esc to show or hide the panic page. Disguise and themes apply to this browser tab.</p>
+      <p class="settings-note">Press your panic key (default `) to show or hide the panic page. Export saves settings + custom games as a JSON file you can import anywhere.</p>
     </div>
   </div>
 

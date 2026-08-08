@@ -562,10 +562,17 @@ function hidePanic() {
   }
 }
 
+function panicCombo() {
+  return window.ARX && ARX.settings ? ARX.settings.panicKey() : "`";
+}
+
 document.addEventListener(
   "keydown",
   (e) => {
-    if (e.key !== "Escape") return;
+    const active = document.activeElement;
+    if (active && active.id === "set-panic-key") return;
+    if (!(window.ARX && ARX.settings)) return;
+    if (ARX.settings.comboFromEvent(e) !== panicCombo()) return;
     if (panicOverlay.classList.contains("hidden")) showPanic();
     else hidePanic();
   },
