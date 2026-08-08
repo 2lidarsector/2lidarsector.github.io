@@ -76,7 +76,7 @@ const library = [
   {
     name: "Study Portal",
     desc: "A student resource hub with curated picks and a searchable library.",
-    path: "https://genizymath.github.io/",
+    path: "https://gn-math.dev/",
     tag: "Library",
     grad: ["#fc2651", "#0f172a"],
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="12" y="30" width="76" height="40" rx="20" stroke="#fff" stroke-width="7"/><path d="M32 45v10M27 50h10" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="68" cy="46" r="4" fill="#fff"/><circle cx="78" cy="56" r="4" fill="#fff"/></svg>',
