@@ -105,8 +105,8 @@ const library = [
     icon: '<svg viewBox="0 0 100 100" fill="none"><rect x="22" y="14" width="56" height="72" rx="8" fill="#fff" stroke="#7f1d1d" stroke-width="4"/><path d="M50 30l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="#ef4444"/><circle cx="32" cy="26" r="3" fill="#7f1d1d"/><circle cx="68" cy="74" r="3" fill="#7f1d1d"/></svg>',
   },
   {
-    name: "Atlas Studio",
-    desc: "A high-performance WASM client with friends, private messaging, and schematics.",
+    name: "A Client",
+    desc: "Online.",
     path: "/apps/astra/",
     tag: "3D",
     cloak: "docs",
@@ -513,9 +513,10 @@ function cardHtml(g) {
   const thumb = g.icon
     ? g.icon
     : `<span class="thumb-emoji">${g.emoji ? esc(g.emoji) : "&#127918;"}</span>`;
+  const isDownload = !!g.download;
   return `
     <div class="app-card-wrap${g.custom ? " custom-card" : ""}">
-      <a class="app-card" href="${esc(g.path)}" data-cloak="${esc(g.cloak || "")}">
+      <a class="app-card${isDownload ? " download-card" : ""}" href="${esc(g.download || g.path)}" ${isDownload ? `download="${esc(g.name + ".html")}"` : ""} data-cloak="${esc(g.cloak || "")}">
         ${g.custom ? `<button class="card-remove" title="Remove game" data-remove="${esc(g.name)}">&#10005;</button>` : ""}
         <div class="app-thumb" style="background: linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})">
           ${thumb}
@@ -525,8 +526,8 @@ function cardHtml(g) {
           <p>${esc(g.desc || "Your custom game.")}</p>
           <span class="app-tag">${esc(g.tag || "Custom")}</span>
         </div>
+        ${isDownload ? `<span class="card-dl-label">&#11015; Download</span>` : ""}
       </a>
-      ${g.download ? `<a class="card-download" href="${esc(g.download)}" download="${esc(g.name + ".html")}" title="Download ${esc(g.name)}">&#11015;</a>` : ""}
     </div>`;
 }
 
@@ -747,13 +748,9 @@ document.getElementById("library-grid").addEventListener("click", (e) => {
     removeCustomGame(rm.getAttribute("data-remove"));
     return;
   }
-  const dl = e.target.closest("a.card-download");
-  if (dl) {
-    e.stopPropagation();
-    return;
-  }
   const card = e.target.closest("a.app-card");
   if (!card) return;
+  if (card.hasAttribute("download")) return;
   e.preventDefault();
   const href = card.getAttribute("href");
   const h3 = card.querySelector("h3");

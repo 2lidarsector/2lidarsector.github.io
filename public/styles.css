@@ -869,33 +869,22 @@ a {
   background: var(--danger);
 }
 
-.card-download {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: rgba(10, 12, 20, 0.7);
-  color: var(--dim);
-  font-size: 13px;
-  line-height: 1;
-  text-decoration: none;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s, color 0.15s;
-}
-
-.app-card-wrap:hover .card-download {
-  opacity: 1;
-}
-
-.card-download:hover {
-  color: #fff;
+.card-dl-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   background: var(--accent);
+  color: #fff;
+}
+
+.app-card-wrap:hover .card-dl-label {
+  filter: brightness(1.1);
 }
 
 .thumb-emoji {
