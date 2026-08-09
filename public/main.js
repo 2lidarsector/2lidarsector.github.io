@@ -526,6 +526,7 @@ function renderTabs() {
       ${t.incognito ? '<span class="tab-pin-icon incognito-mark">&#128065;</span>' : ""}
       ${t.pinned ? '<span class="tab-pin-icon">&#128204;</span>' : ""}
       <span class="tab-title">${esc(t.title)}</span>
+      <button class="tab-fs" data-id="${t.id}" title="Fullscreen" ${t.pinned ? "disabled" : ""}>&#10226;</button>
       <button class="tab-close" data-id="${t.id}" title="Close tab" ${t.pinned ? "disabled" : ""}>&#10005;</button>
     </div>`
     )
@@ -664,6 +665,46 @@ function pinTab(id, pinned) {
   if (!tab) return;
   tab.pinned = !!pinned;
   renderTabs();
+}
+
+function homeUrl() {
+  if (window.ARX && ARX.settings) {
+    const h = ARX.settings.homeUrl();
+    if (h) return h;
+  }
+  return "https://duckduckgo.com";
+}
+
+function engineHome() {
+  try {
+    const tpl =
+      window.ARX && ARX.settings ? ARX.settings.engineTemplate() : "https://duckduckgo.com/?q=%s";
+    return new URL(tpl).origin;
+  } catch (e) {
+    return "https://duckduckgo.com";
+  }
+}
+
+function newTab() {
+  const home = homeUrl();
+  openTab(home, home, { proxy: true });
+}
+
+function openIncognito() {
+  const home = engineHome();
+  openTab(home, home + " (Incognito)", { proxy: true, incognito: true });
+}
+
+function fullscreenTab(id) {
+  const tab = tabs.find((t) => t.id === id);
+  if (!tab) return;
+  activateTab(id);
+  const target = tab.frame || document.documentElement;
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (target.requestFullscreen) target.requestFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  } catch (e) {}
 }
 
 function showHome() {
@@ -924,14 +965,12 @@ document.getElementById("btn-reload").addEventListener("click", () => {
 });
 
 document.getElementById("btn-home").addEventListener("click", showHome);
-document.getElementById("btn-new-tab").addEventListener("click", showHome);
+document.getElementById("btn-new-tab").addEventListener("click", newTab);
 
 document.getElementById("nav-open-browser").addEventListener("click", (e) => {
   e.preventDefault();
   if (tabs.length === 0) {
-    let home = "https://www.google.com";
-    if (window.ARX && ARX.settings) home = ARX.settings.homeUrl() || home;
-    openTab(home, home, { proxy: true });
+    newTab();
   } else if (activeTabId) {
     activateTab(activeTabId);
   } else {
@@ -940,15 +979,16 @@ document.getElementById("nav-open-browser").addEventListener("click", (e) => {
   }
 });
 
-document.getElementById("btn-incognito").addEventListener("click", () => {
-  openTab("about:blank", "New incognito tab", { incognito: true, proxy: false });
-});
+document.getElementById("btn-incognito").addEventListener("click", openIncognito);
 
 document.getElementById("btn-fullscreen").addEventListener("click", () => {
-  try {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else document.documentElement.requestFullscreen();
-  } catch (e) {}
+  if (activeTabId) fullscreenTab(activeTabId);
+  else {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    } catch (e) {}
+  }
 });
 
 document.getElementById("btn-exit").addEventListener("click", () => {
@@ -962,6 +1002,12 @@ document.getElementById("btn-exit").addEventListener("click", () => {
 // ---- tab bar ----
 
 tabBar.addEventListener("click", (e) => {
+  const fs = e.target.closest(".tab-fs");
+  if (fs) {
+    e.stopPropagation();
+    fullscreenTab(fs.getAttribute("data-id"));
+    return;
+  }
   const close = e.target.closest(".tab-close");
   if (close) {
     e.stopPropagation();
@@ -1000,7 +1046,7 @@ document.addEventListener(
         browserAddress.select();
       } else if (k === "t") {
         e.preventDefault();
-        showHome();
+        newTab();
       } else if (k === "w") {
         e.preventDefault();
         if (activeTabId) closeTab(activeTabId);
@@ -1011,9 +1057,6 @@ document.addEventListener(
           const next = tabs[(idx + (e.shiftKey ? tabs.length - 1 : 1)) % tabs.length];
           activateTab(next.id);
         }
-      } else if (k === "n" && e.shiftKey) {
-        e.preventDefault();
-        openTab("about:blank", "New incognito tab", { incognito: true, proxy: false });
       }
     }
     if (e.key === "Escape" && !typing) {

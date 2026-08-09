@@ -3,7 +3,7 @@ window.ARX = window.ARX || {};
 (function () {
   var DEFAULTS = {
     engine: "ddg",
-    home: "https://www.google.com",
+    home: "https://duckduckgo.com",
     transport: "bare",
     proxyUrl: "",
     cloak: "default",
@@ -556,7 +556,7 @@ window.ARX = window.ARX || {};
   if (resetBtn) resetBtn.addEventListener("click", function () {
     reset();
     if (engineSel) engineSel.value = "ddg";
-    if (homeSel) homeSel.value = "https://www.google.com";
+    if (homeSel) homeSel.value = "https://duckduckgo.com";
     if (transportSel) transportSel.value = "bare";
     if (cloakSel) cloakSel.value = "default";
     if (themeSel) themeSel.value = "midnight";

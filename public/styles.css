@@ -1065,6 +1065,29 @@ a {
   border-radius: 6px;
 }
 
+.tab-fs {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 6px;
+}
+
+.tab-fs:hover {
+  color: var(--accent);
+  background: rgba(109, 125, 246, 0.12);
+}
+
+.tab-fs:disabled {
+  cursor: default;
+  color: transparent;
+  background: transparent;
+}
+
 .tab-close:hover {
   color: var(--danger);
   background: rgba(248, 113, 113, 0.14);
