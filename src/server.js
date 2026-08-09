@@ -269,11 +269,12 @@ app.get("/api/auth", (req, res) => {
 // of "/". Putting the token in the PATH (/auth/<token>) makes each handoff a
 // unique URL that no CDN could have cached.
 //
-// CDN-proof auth handoff. We deliberately respond with a 200 page that IS the
-// destination app itself (not a redirect), because some CDNs (bunny.net) cache
-// redirect responses and serve stale "go back to login" copies even after a
-// valid session exists. By serving the real app HTML right here with the
-// Set-Cookie header, there is no follow-up request for the CDN to intercept.
+// CDN-proof auth handoff. We deliberately respond with a 200 HTML page (not a
+// 302) because some CDNs (bunny.net) drop or mishandle Set-Cookie on redirect
+// responses. A Set-Cookie on a normal 200 page is forwarded reliably; the tiny
+// page then JS-redirects to the clean destination with the session cookie in
+// place. Requests to the destination then carry the cookie, so a CDN configured
+// with "bypass cache on cookie" (or no-store) serves the real app page.
 app.get("/auth/:token", (req, res) => {
   const t = req.params.token || "";
   const payload = parseToken(t);
@@ -286,14 +287,6 @@ app.get("/auth/:token", (req, res) => {
   res.setHeader("Pragma", "no-cache");
   let next = typeof req.query.next === "string" ? req.query.next : "";
   if (!next.startsWith("/") || next.startsWith("//")) next = "/app.html";
-  // Serve the requested app page directly (only files from our public dir).
-  let file = next.split(/[?#]/, 1)[0];
-  if (file === "/") file = "/index.html";
-  const filePath = join(publicPath, file.replace(/^\/+/, ""));
-  if (existsSync(filePath) && filePath.startsWith(publicPath + "\\")) {
-    res.type("html").sendFile(filePath);
-    return;
-  }
   const target = JSON.stringify(next);
   res.send(
     "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Loading\u2026</title></head>" +
