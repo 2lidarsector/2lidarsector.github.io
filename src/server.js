@@ -71,9 +71,9 @@ function safeEqual(a, b) {
 
 // ---------- sessions ----------
 
-// token -> { exp, key, ip, loginAt, lastSeen }
+// token -> { exp, key, ip, device, ua, loginAt, lastSeen }
 const sessions = new Map();
-const recentLogins = []; // { key, ip, at } newest first, capped
+const recentLogins = []; // { key, ip, device, ua, at } newest first, capped
 
 function cookieFor(token) {
   return `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
@@ -107,9 +107,18 @@ function authed(req) {
   return true;
 }
 
-function recordLogin(key, ip) {
-  recentLogins.unshift({ key, ip, at: Date.now() });
+function recordLogin(key, ip, device, ua) {
+  recentLogins.unshift({ key, ip, device, ua, at: Date.now() });
   if (recentLogins.length > 200) recentLogins.length = 200;
+}
+
+// Best-effort client IP from the proxy chain.
+function clientIp(req) {
+  const xff = req.headers["x-forwarded-for"];
+  if (typeof xff === "string" && xff.length) {
+    return xff.split(",")[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || "unknown";
 }
 
 // ---------- brute-force throttle ----------
@@ -164,7 +173,7 @@ app.get("/api/auth", (req, res) => {
 });
 
 app.post("/api/login", async (req, res) => {
-  const ip = req.ip || "unknown";
+  const ip = clientIp(req);
   if (throttled(ip)) {
     res.status(429).json({ ok: false, error: "Too many attempts. Wait a minute." });
     return;
@@ -172,8 +181,10 @@ app.post("/api/login", async (req, res) => {
   const key = req.body && typeof req.body.key === "string" ? req.body.key : "";
   if (await validKey(key)) {
     const token = randomBytes(32).toString("hex");
-    sessions.set(token, { exp: Date.now() + SESSION_TTL_MS, key, ip, loginAt: Date.now(), lastSeen: Date.now() });
-    recordLogin(key, ip);
+    const device = typeof req.body.device === "string" ? req.body.device.slice(0, 64) : "";
+    const ua = (req.headers["user-agent"] || "").slice(0, 200);
+    sessions.set(token, { exp: Date.now() + SESSION_TTL_MS, key, ip, device, ua, loginAt: Date.now(), lastSeen: Date.now() });
+    recordLogin(key, ip, device, ua);
     res.setHeader("Set-Cookie", cookieFor(token));
     res.json({ ok: true });
   } else {
@@ -275,29 +286,50 @@ function activeSessions() {
   const out = [];
   for (const [token, s] of sessions) {
     if (s.exp <= now) continue;
-    out.push({ token, key: s.key, ip: s.ip, loginAt: s.loginAt, lastSeen: s.lastSeen });
+    out.push({ token, key: s.key, ip: s.ip, device: s.device, ua: s.ua, loginAt: s.loginAt, lastSeen: s.lastSeen });
   }
   return out;
 }
 
-function summarize() {
+async function allKnownKeys() {
+  if (store.dbConfigured()) {
+    const rows = await store.listKeys();
+    return rows.map((r) => r.key_value);
+  }
+  loadLocalKeys();
+  return [...localKeys];
+}
+
+// A key is "shared" when more than one distinct device is using it.
+// IPs are tracked for reference but not trusted for sharing detection.
+async function summarize() {
   const active = activeSessions();
+  const known = await allKnownKeys();
   const byKey = new Map();
+  for (const k of known) {
+    byKey.set(k, { key: k, sessions: [], devices: new Set(), ips: new Set(), uas: new Set() });
+  }
   for (const s of active) {
-    if (!byKey.has(s.key)) byKey.set(s.key, { key: s.key, sessions: [], ips: new Set() });
+    if (!byKey.has(s.key)) byKey.set(s.key, { key: s.key, sessions: [], devices: new Set(), ips: new Set(), uas: new Set() });
     const e = byKey.get(s.key);
     e.sessions.push(s);
+    if (s.device) e.devices.add(s.device);
+    if (s.ua) e.uas.add(s.ua);
     e.ips.add(s.ip);
   }
   const keys = [];
   for (const e of byKey.values()) {
+    const lastSeen = e.sessions.length ? Math.max(...e.sessions.map((s) => s.lastSeen)) : 0;
     keys.push({
       key: e.key,
+      used: e.sessions.length > 0,
       sessionCount: e.sessions.length,
+      deviceCount: e.devices.size,
+      devices: [...e.devices],
       ipCount: e.ips.size,
       ips: [...e.ips],
-      lastSeen: Math.max(...e.sessions.map((s) => s.lastSeen)),
-      sharing: e.sessions.length > 1 || e.ips.size > 1,
+      lastSeen,
+      sharing: e.sessions.length > 0 && e.devices.size > 1,
     });
   }
   return { active, keys };
@@ -305,17 +337,10 @@ function summarize() {
 
 app.get("/api/admin/overview", requireAdmin, async (req, res) => {
   try {
-    const sum = summarize();
-    let totalKeys = 0;
-    if (store.dbConfigured()) {
-      totalKeys = (await store.listKeys()).length;
-    } else {
-      loadLocalKeys();
-      totalKeys = localKeys.length;
-    }
+    const sum = await summarize();
     res.json({
       ok: true,
-      totalKeys,
+      totalKeys: sum.keys.length,
       activeSessions: sum.active.length,
       uniqueIps: new Set(sum.active.map((s) => s.ip)).size,
       keys: sum.keys,

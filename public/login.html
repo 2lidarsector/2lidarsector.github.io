@@ -104,6 +104,39 @@
       location.href = next;
     }
 
+    function makeFingerprint() {
+      try {
+        var parts = [
+          navigator.userAgent,
+          navigator.platform || "",
+          navigator.language || "",
+          screen.width + "x" + screen.height,
+          screen.colorDepth,
+          new Date().getTimezoneOffset(),
+          navigator.hardwareConcurrency || "",
+          navigator.deviceMemory || "",
+          navigator.maxTouchPoints || 0,
+          window.devicePixelRatio || 1,
+        ];
+        var c = document.createElement("canvas");
+        var ctx = c.getContext("2d");
+        if (ctx) {
+          ctx.textBaseline = "top";
+          ctx.font = "14px Arial";
+          ctx.fillText("arx-fp-1", 2, 2);
+          parts.push(c.toDataURL());
+        }
+        var s = parts.join("|");
+        var h = 0;
+        for (var i = 0; i < s.length; i++) {
+          h = (h * 31 + s.charCodeAt(i)) | 0;
+        }
+        return "d" + (h >>> 0).toString(16);
+      } catch (e) {
+        return "d0";
+      }
+    }
+
     fetch("/api/auth", { cache: "no-store" })
       .then(function (r) { return r.json(); })
       .then(function (d) {
@@ -128,7 +161,7 @@
       fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key }),
+        body: JSON.stringify({ key: key, device: makeFingerprint() }),
       })
         .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
         .then(function (res) {

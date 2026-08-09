@@ -165,7 +165,7 @@
         <div class="list" id="logins-list"></div>
       </div>
 
-      <p class="hint">Auto-refreshes every 15s. A key is flagged as "possibly shared" when it has multiple concurrent sessions or multiple IPs. Use Kick to force sign-out.</p>
+      <p class="hint">Auto-refreshes every 15s. A key is flagged as "possibly shared" when it is used from more than one distinct device (browser fingerprint). Use Kick to force sign-out. IPs are shown for reference only.</p>
       <p class="status" id="status"></p>
     </div>
   </div>
@@ -235,7 +235,7 @@
           row.className = "item";
           var who = document.createElement("div");
           who.className = "who";
-          who.innerHTML = "<b>" + esc(k.key) + "</b> &nbsp;&middot;&nbsp; " + k.sessionCount + " session(s), " + k.ips.length + " IP(s) &mdash; " + esc(k.ips.join(", ")) + " &nbsp;&middot;&nbsp; last " + ago(k.lastSeen);
+          who.innerHTML = "<b>" + esc(k.key) + "</b> &nbsp;&middot;&nbsp; " + k.sessionCount + " session(s), " + k.deviceCount + " device(s) &nbsp;&middot;&nbsp; last " + ago(k.lastSeen);
           var kick = document.createElement("button");
           kick.className = "danger";
           kick.textContent = "Kick";
@@ -253,7 +253,7 @@
       if (!d.keys.length) {
         var e = document.createElement("div");
         e.className = "empty";
-        e.textContent = "No active sessions yet.";
+        e.textContent = "No keys yet.";
         keysList.appendChild(e);
       } else {
         d.keys.forEach(function (k) {
@@ -262,11 +262,20 @@
           var kv = document.createElement("div");
           kv.className = "kv";
           var shareBadge = k.sharing ? '<span class="badge share">SHARED</span> ' : '<span class="badge ok">OK</span> ';
-          var ipBadge = '<span class="badge ips">' + k.ips.length + " IP</span> ";
-          kv.innerHTML = "<b>" + esc(k.key) + "</b><br><div class='sub'>" + ipBadge + k.sessionCount + " session(s) &middot; " + esc(k.ips.join(", ") || "no IPs") + " &middot; last " + ago(k.lastSeen) + "</div>";
+          var usedBadge = k.used ? "" : '<span class="badge ips">UNUSED</span> ';
+          var sub = "";
+          if (k.used) {
+            sub = " " + k.sessionCount + " session(s) &middot; " + k.deviceCount + " device(s)";
+            if (k.ips.length) sub += " &middot; " + esc(k.ips.join(", "));
+            sub += " &middot; last " + ago(k.lastSeen);
+          } else {
+            sub = " never used";
+          }
+          kv.innerHTML = "<b>" + esc(k.key) + "</b><br><div class='sub'>" + usedBadge + shareBadge + sub + "</div>";
           var kickBtn = document.createElement("button");
           kickBtn.className = "danger";
           kickBtn.textContent = "Kick";
+          kickBtn.disabled = !k.used;
           kickBtn.addEventListener("click", function () { kickKey(k.key); });
           var delBtn = document.createElement("button");
           delBtn.textContent = "Remove";
@@ -291,7 +300,8 @@
           row.className = "item";
           var who = document.createElement("div");
           who.className = "who";
-          who.innerHTML = "<b>" + esc(l.key) + "</b> &nbsp;from&nbsp; " + esc(l.ip);
+          var dev = l.device ? " &middot; device " + esc(l.device) : "";
+          who.innerHTML = "<b>" + esc(l.key) + "</b> &nbsp;from&nbsp; " + esc(l.ip) + dev;
           var when = document.createElement("div");
           when.className = "when";
           when.textContent = new Date(l.at).toLocaleString();
