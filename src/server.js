@@ -397,6 +397,7 @@ app.get("/api/admin/overview", requireAdmin, async (req, res) => {
     }
     res.json({
       ok: true,
+      v: APP_VERSION,
       db: { configured: store.dbConfigured(), connected: dbOk, host: process.env.DB_HOST || "", error: dbError },
       totalKeys: sum.keys.length,
       activeSessions: sum.active.length,
