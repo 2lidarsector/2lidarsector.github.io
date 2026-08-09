@@ -113,6 +113,17 @@
       }
     }
 
+    // Set the session cookie from JS as well, so the session survives even if
+    // a CDN (bunny.net) drops the server's Set-Cookie header. Readable by JS
+    // (not HttpOnly) but the value is just the random signed session token.
+    function setCookie(token) {
+      try {
+        document.cookie =
+          "arx_session=" + encodeURIComponent(token) +
+          "; Path=/; SameSite=Lax; Max-Age=43200";
+      } catch (e) {}
+    }
+
     function makeFingerprint() {
       try {
         var parts = [
@@ -176,6 +187,7 @@
         .then(function (res) {
           if (res.status === 200 && res.d && res.d.ok) {
             try { sessionStorage.setItem("arx_token", res.d.token); } catch (e) {}
+            setCookie(res.d.token);
             go();
             return;
           }
