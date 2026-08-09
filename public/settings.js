@@ -596,10 +596,17 @@ window.ARX = window.ARX || {};
   if (blankBtn) blankBtn.addEventListener("click", aboutBlank);
   if (blobTabBtn) blobTabBtn.addEventListener("click", blobTab);
   if (logoutBtn) logoutBtn.addEventListener("click", function () {
+    // Clear client-side session state too: a CDN (bunny.net) may drop the
+    // server's Set-Cookie on the logout response, so rely on JS to wipe the
+    // cookie and token that the login page uses to auto-restore a session.
+    try { sessionStorage.removeItem("arx_token"); } catch (e) {}
+    try {
+      document.cookie = "arx_session=; Path=/; Max-Age=0; SameSite=Lax";
+    } catch (e) {}
     fetch("/api/logout", { method: "POST" })
       .catch(function () {})
       .finally(function () {
-        try { location.href = "/login.html"; } catch (e) {}
+        try { location.href = "/login.html?next=" + encodeURIComponent("/"); } catch (e) {}
       });
   });
 
