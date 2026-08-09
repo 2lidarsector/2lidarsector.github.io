@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Number Merge</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: #0b0d1a; color: #e7e9ff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+  h1 { font-size: 26px; }
+  .hud { display: flex; align-items: center; gap: 20px; }
+  .hud span { color: #8b90c4; } .hud b { color: #f59e0b; }
+  #restart { padding: 8px 18px; border: none; border-radius: 10px; background: linear-gradient(135deg,#f59e0b,#ef4444); color: #fff; font-weight: 700; cursor: pointer; }
+  #board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #12142a; border: 1px solid #262a52; border-radius: 12px; padding: 10px; width: min(420px, 92vw); }
+  .cell { aspect-ratio: 1; border-radius: 8px; background: #0b0d1a; display: grid; place-items: center; font-size: 32px; font-weight: 800; color: #0b0d1a; transition: background .1s, transform .1s; }
+  .t2 { background: #eee4da; } .t4 { background: #ede0c8; }
+  .t8 { background: #f2b179; } .t16 { background: #f59563; }
+  .t32 { background: #f67c5f; } .t64 { background: #f65e3b; color: #fff; }
+  .t128 { background: #edcf72; color: #fff; font-size: 28px; }
+  .t256 { background: #edcc61; color: #fff; font-size: 28px; }
+  .t512 { background: #edc850; color: #fff; font-size: 28px; }
+  .t1024 { background: #edc53f; color: #fff; font-size: 22px; }
+  .t2048 { background: #edc22e; color: #fff; font-size: 22px; animation: pop .2s; }
+  .t4096 { background: #3c3a32; color: #fff; font-size: 22px; }
+  @keyframes pop { 50% { transform: scale(1.15); } }
+  #msg { font-size: 15px; color: #f472b6; min-height: 20px; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>Number Merge</h1>
+<div class="hud"><span>Score: <b id="score">0</b></span><span>Best: <b id="best">0</b></span><button id="restart">New Game</button></div>
+<div id="board"></div>
+<div id="msg"></div>
+<p style="color:#8b90c4;font-size:13px">Arrow keys / WASD to move.</p>
+<script>
+const boardEl = document.getElementById("board");
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const msgEl = document.getElementById("msg");
+
+let grid, score, over, won;
+let bestScore = +localStorage.getItem("number-merge-best") || 0;
+bestEl.textContent = bestScore;
+
+const colors = { 2:"#eee4da", 4:"#ede0c8", 8:"#f2b179", 16:"#f59563", 32:"#f67c5f", 64:"#f65e3b", 128:"#edcf72", 256:"#edcc61", 512:"#edc850", 1024:"#edc53f", 2048:"#edc22e" };
+
+function reset() {
+  grid = Array.from({ length: 4 }, () => Array(4).fill(0));
+  score = 0; over = false; won = false;
+  scoreEl.textContent = 0; msgEl.textContent = "";
+  spawn(); spawn(); render();
+}
+
+function spawn() {
+  const empty = [];
+  grid.forEach((row, r) => row.forEach((v, c) => { if (!v) empty.push([r, c]); }));
+  if (!empty.length) return;
+  const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+  grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+}
+
+function slideRow(row) {
+  const vals = row.filter(v => v);
+  let changed = false, gained = 0, out = [];
+  for (let i = 0; i < vals.length; i++) {
+    if (vals[i] === vals[i + 1]) { out.push(vals[i] * 2); gained += vals[i] * 2; i++; changed = true; }
+    else out.push(vals[i]);
+  }
+  while (out.length < 4) out.push(0);
+  for (let i = 0; i < 4; i++) if (row[i] !== out[i]) changed = true;
+  return { out, changed, gained };
+}
+
+function move(dx, dy) {
+  if (over) return;
+  let moved = false, gained = 0;
+  const order = dx === 1 || dy === 1 ? [3, 2, 1, 0] : [0, 1, 2, 3];
+  const work = grid.map((row, r) => row.map((v, c) => grid[r][c]));
+  if (dx !== 0) {
+    for (const r of [0, 1, 2, 3]) {
+      const seq = order.map(c => work[r][c]);
+      const { out, changed, gained: g } = slideRow(seq);
+      order.forEach((c, i) => { work[r][c] = out[i]; });
+      if (changed) { moved = true; gained += g; }
+    }
+  } else {
+    for (const c of [0, 1, 2, 3]) {
+      const seq = order.map(r => work[r][c]);
+      const { out, changed, gained: g } = slideRow(seq);
+      order.forEach((r, i) => { work[r][c] = out[i]; });
+      if (changed) { moved = true; gained += g; }
+    }
+  }
+  if (!moved) return;
+  grid = work;
+  score += gained;
+  scoreEl.textContent = score;
+  if (score > bestScore) { bestScore = score; localStorage.setItem("number-merge-best", bestScore); bestEl.textContent = bestScore; }
+  spawn();
+  render();
+  if (grid.flat().includes(2048) && !won) { won = true; msgEl.textContent = "You win! Keep going or start a new game."; }
+  if (!canMove()) { over = true; msgEl.textContent = "Game over!"; }
+}
+
+function canMove() {
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+    if (!grid[r][c]) return true;
+    if (r < 3 && grid[r][c] === grid[r + 1][c]) return true;
+    if (c < 3 && grid[r][c] === grid[r][c + 1]) return true;
+  }
+  return false;
+}
+
+function render() {
+  boardEl.innerHTML = "";
+  grid.flat().forEach(v => {
+    const d = document.createElement("div");
+    d.className = "cell" + (v ? " t" + v : "");
+    d.textContent = v || "";
+    d.style.fontSize = v >= 1024 ? "22px" : v >= 128 ? "28px" : "32px";
+    boardEl.appendChild(d);
+  });
+}
+
+window.addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+  if (k === "arrowleft" || k === "a") { e.preventDefault(); move(-1, 0); }
+  if (k === "arrowright" || k === "d") { e.preventDefault(); move(1, 0); }
+  if (k === "arrowup" || k === "w") { e.preventDefault(); move(0, -1); }
+  if (k === "arrowdown" || k === "s") { e.preventDefault(); move(0, 1); }
+});
+
+document.getElementById("restart").addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>

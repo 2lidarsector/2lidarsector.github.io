@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Sort</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0b0d1a;color:#e7e9ff;font-family:'Segoe UI',Arial,sans-serif;min-height:100vh;}
+h1{text-align:center;font-size:24px;font-weight:700;padding:20px 0 6px;}
+.hud{display:flex;align-items:center;justify-content:center;gap:26px;padding:12px 0 18px;flex-wrap:wrap;}
+.hud-item .label{color:#8b90c4;font-size:15px;}
+.hud-item .value{color:#34d399;font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;}
+.hud button,.panel button{background:linear-gradient(135deg,#6d5df6,#34d399);color:#fff;font-weight:700;border:none;border-radius:8px;padding:10px 24px;cursor:pointer;font-size:15px;}
+.hud button:hover,.panel button:hover{filter:brightness(1.12);}
+.board{max-width:1080px;margin:0 auto;padding:0 12px;}
+.top-row{display:flex;gap:14px;margin-bottom:20px;}
+.pile{position:relative;width:84px;height:118px;border:1px dashed rgba(139,144,196,.35);border-radius:8px;background:rgba(139,144,196,.05);}
+.waste-pile{width:140px;}
+.foundation-row{display:flex;gap:12px;margin-left:8px;}
+.foundation{cursor:pointer;}
+.card{position:relative;width:84px;height:118px;border-radius:8px;user-select:none;cursor:pointer;}
+.card.down{background:repeating-linear-gradient(45deg,rgba(255,255,255,.10) 0 5px,rgba(255,255,255,0) 5px 10px),linear-gradient(135deg,#24407f,#101e49);border:1px solid #3b5bb3;box-shadow:0 2px 6px rgba(0,0,0,.45);}
+.card.down::before{content:'';position:absolute;inset:5px;border:1px solid rgba(255,255,255,.18);border-radius:5px;}
+.card.up{background:#fff;border:1px solid #c9cde6;box-shadow:0 2px 6px rgba(0,0,0,.35);}
+.card.hearts,.card.diamonds{color:#d63a3a;}
+.card.spades,.card.clubs{color:#161a2e;}
+.rank{position:absolute;top:6px;left:8px;font-size:19px;font-weight:800;line-height:1;}
+.mini-suit{position:absolute;top:25px;left:8px;font-size:15px;}
+.big-suit{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:46px;opacity:.92;}
+.card.selected{outline:3px solid #34d399;outline-offset:2px;z-index:40;}
+.waste-card{position:absolute;top:0;}
+.slot-suit{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;color:rgba(139,144,196,.4);}
+.recycle .slot-suit{color:#8b90c4;font-size:30px;}
+.tableau-row{display:flex;gap:12px;}
+.column{width:84px;min-height:118px;border:none;border-radius:8px;cursor:pointer;}
+.column.empty-column{border:1px dashed rgba(139,144,196,.3);background:rgba(139,144,196,.04);}
+#overlay{position:fixed;inset:0;background:rgba(11,13,26,.92);display:flex;align-items:center;justify-content:center;z-index:100;}
+#overlay.hidden{display:none;}
+.panel{background:#131736;border:1px solid #262a52;border-radius:12px;padding:38px 52px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.5);}
+.panel h2{color:#f472b6;font-size:30px;margin-bottom:10px;}
+.panel p{color:#8b90c4;margin-bottom:24px;}
+</style>
+</head>
+<body>
+<h1>Card Sort</h1>
+<div class="hud">
+  <div class="hud-item"><span class="label">Moves:</span> <span class="value" id="moves">0</span></div>
+  <div class="hud-item"><span class="label">Time:</span> <span class="value" id="time">00:00</span></div>
+  <button id="newGameBtn">New Game</button>
+</div>
+<div class="board" id="board">
+  <div class="top-row">
+    <div class="pile" id="stock" data-zone="stock"></div>
+    <div class="pile waste-pile" id="waste" data-zone="waste"></div>
+    <div class="foundation-row">
+      <div class="pile foundation" id="foundation-0" data-zone="foundation" data-index="0"></div>
+      <div class="pile foundation" id="foundation-1" data-zone="foundation" data-index="1"></div>
+      <div class="pile foundation" id="foundation-2" data-zone="foundation" data-index="2"></div>
+      <div class="pile foundation" id="foundation-3" data-zone="foundation" data-index="3"></div>
+    </div>
+  </div>
+  <div class="tableau-row" id="tableau-row">
+    <div class="column" id="column-0" data-zone="tableau" data-col="0"></div>
+    <div class="column" id="column-1" data-zone="tableau" data-col="1"></div>
+    <div class="column" id="column-2" data-zone="tableau" data-col="2"></div>
+    <div class="column" id="column-3" data-zone="tableau" data-col="3"></div>
+    <div class="column" id="column-4" data-zone="tableau" data-col="4"></div>
+    <div class="column" id="column-5" data-zone="tableau" data-col="5"></div>
+    <div class="column" id="column-6" data-zone="tableau" data-col="6"></div>
+  </div>
+</div>
+<div id="overlay" class="hidden">
+  <div class="panel">
+    <h2>You Win!</h2>
+    <p>Solved in <span id="finalTime">00:00</span> with <span id="finalMoves">0</span> moves.</p>
+    <button id="overlayNewGame">New Game</button>
+  </div>
+</div>
+<script>
+var SUITS=['hearts','diamonds','spades','clubs'];
+var RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+var SYMBOLS={hearts:'\u2665',diamonds:'\u2666',spades:'\u2660',clubs:'\u2663'};
+var stock=[],waste=[],tableau=[],foundations=[];
+var selection=null,moves=0,seconds=0;
+
+function newGame(){
+  stock=[];waste=[];tableau=[[],[],[],[],[],[],[]];foundations=[[],[],[],[]];
+  var deck=[];
+  for(var s=0;s<4;s++){
+    for(var r=1;r<=13;r++){
+      deck.push({suit:SUITS[s],rank:r,faceUp:false});
+    }
+  }
+  for(var i=deck.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var t=deck[i];deck[i]=deck[j];deck[j]=t;
+  }
+  var idx=0;
+  for(var c=0;c<7;c++){
+    for(var n=0;n<=c;n++){
+      deck[idx].faceUp=false;
+      tableau[c].push(deck[idx]);
+      idx++;
+    }
+    tableau[c][tableau[c].length-1].faceUp=true;
+  }
+  for(;idx<deck.length;idx++) stock.push(deck[idx]);
+  selection=null;moves=0;seconds=0;
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('moves').textContent='0';
+  document.getElementById('time').textContent='00:00';
+}
+
+function cardEl(card){
+  var d=document.createElement('div');
+  if(card.faceUp){
+    d.className='card up '+card.suit;
+    var rank=RANKS[card.rank-1],sym=SYMBOLS[card.suit];
+    d.innerHTML='<span class="rank">'+rank+'</span><span class="mini-suit">'+sym+'</span><span class="big-suit">'+sym+'</span>';
+  }else{
+    d.className='card down';
+  }
+  return d;
+}
+
+function flipTop(arr){
+  if(arr.length&&!arr[arr.length-1].faceUp) arr[arr.length-1].faceUp=true;
+}
+
+function oppositeColor(a,b){
+  var red=function(s){return s==='hearts'||s==='diamonds';};
+  return red(a)!==red(b);
+}
+
+function canPlaceTableau(card,target){
+  return card.rank===target.rank-1&&oppositeColor(card.suit,target.suit);
+}
+
+function canPlaceFoundation(card,f){
+  if(f.length===0) return card.rank===1;
+  var top=f[f.length-1];
+  return card.suit===top.suit&&card.rank===top.rank+1;
+}
+
+function moveStack(colSrc,idxSrc,colDst){
+  var src=tableau[colSrc],dst=tableau[colDst];
+  if(idxSrc<0||idxSrc>=src.length) return false;
+  var top=src[idxSrc];
+  if(dst.length){
+    var target=dst[dst.length-1];
+    if(!canPlaceTableau(top,target)) return false;
+  }
+  var moving=src.splice(idxSrc);
+  for(var i=0;i<moving.length;i++) dst.push(moving[i]);
+  flipTop(src);
+  moves++;
+  return true;
+}
+
+function moveWasteToTableau(col){
+  var card=waste[waste.length-1];
+  if(!card) return false;
+  var dst=tableau[col];
+  if(dst.length===0){
+    dst.push(waste.pop());moves++;return true;
+  }
+  if(!canPlaceTableau(card,dst[dst.length-1])) return false;
+  dst.push(waste.pop());moves++;return true;
+}
+
+function moveWasteToFoundation(f){
+  var card=waste[waste.length-1];
+  if(!card||!canPlaceFoundation(card,foundations[f])) return false;
+  foundations[f].push(waste.pop());moves++;return true;
+}
+
+function moveTableauToFoundation(col,f){
+  var arr=tableau[col];
+  if(!arr.length) return false;
+  var top=arr[arr.length-1];
+  if(!top.faceUp||!canPlaceFoundation(top,foundations[f])) return false;
+  foundations[f].push(arr.pop());flipTop(arr);moves++;return true;
+}
+
+function tryAutoFoundation(col){
+  var moved=false;
+  while(true){
+    var arr=tableau[col];
+    if(!arr.length) break;
+    var top=arr[arr.length-1];
+    if(!top.faceUp) break;
+    var dest=-1;
+    for(var f=0;f<4;f++){
+      if(canPlaceFoundation(top,foundations[f])){dest=f;break;}
+    }
+    if(dest===-1) break;
+    foundations[dest].push(arr.pop());
+    flipTop(arr);
+    moves++;
+    moved=true;
+  }
+  return moved;
+}
+
+function tryWasteFoundation(){
+  var moved=false;
+  while(waste.length){
+    var top=waste[waste.length-1];
+    var dest=-1;
+    for(var f=0;f<4;f++){
+      if(canPlaceFoundation(top,foundations[f])){dest=f;break;}
+    }
+    if(dest===-1) break;
+    foundations[dest].push(waste.pop());
+    moves++;
+    moved=true;
+  }
+  return moved;
+}
+
+function drawThree(){
+  if(stock.length===0){
+    if(waste.length===0) return;
+    stock=waste.slice().reverse();
+    waste=[];
+  }else{
+    var n=Math.min(3,stock.length);
+    for(var i=0;i<n;i++) waste.push(stock.pop());
+  }
+  render();
+}
+
+function formatTime(s){
+  var m=Math.floor(s/60),r=s%60;
+  return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');
+}
+
+function renderStock(){
+  var el=document.getElementById('stock');
+  el.innerHTML='';
+  if(stock.length===0){
+    el.innerHTML='<span class="slot-suit">&#8635;</span>';
+    el.classList.add('recycle');
+  }else{
+    el.classList.remove('recycle');
+    var count=Math.min(3,stock.length);
+    for(var i=0;i<count;i++){
+      var d=document.createElement('div');
+      d.className='card down';
+      if(i>0) d.style.marginTop='-100px';
+      el.appendChild(d);
+    }
+  }
+}
+
+function renderWaste(){
+  var el=document.getElementById('waste');
+  el.innerHTML='';
+  if(waste.length===0) return;
+  var start=Math.max(0,waste.length-3);
+  for(var i=start;i<waste.length;i++){
+    var d=cardEl(waste[i]);
+    d.classList.add('waste-card');
+    d.setAttribute('data-zone','waste');
+    d.style.left=((i-start)*24)+'px';
+    if(i===waste.length-1&&selection&&selection.type==='waste') d.classList.add('selected');
+    el.appendChild(d);
+  }
+}
+
+function renderFoundations(){
+  for(var f=0;f<4;f++){
+    var el=document.getElementById('foundation-'+f);
+    el.innerHTML='';
+    if(foundations[f].length){
+      el.appendChild(cardEl(foundations[f][foundations[f].length-1]));
+    }else{
+      el.innerHTML='<span class="slot-suit">'+SYMBOLS[SUITS[f]]+'</span>';
+    }
+  }
+}
+
+function renderTableau(){
+  for(var c=0;c<7;c++){
+    var colEl=document.getElementById('column-'+c);
+    colEl.innerHTML='';
+    var cards=tableau[c];
+    if(cards.length===0){
+      colEl.className='column empty-column';
+      continue;
+    }
+    colEl.className='column';
+    for(var i=0;i<cards.length;i++){
+      var d=cardEl(cards[i]);
+      d.setAttribute('data-zone','tableau');
+      d.setAttribute('data-col',c);
+      d.setAttribute('data-index',i);
+      if(i>0) d.style.marginTop=(cards[i].faceUp?'-90px':'-104px');
+      if(selection&&selection.type==='tableau'&&selection.col===c&&selection.idx===i) d.classList.add('selected');
+      colEl.appendChild(d);
+    }
+  }
+}
+
+function render(){
+  renderStock();
+  renderWaste();
+  renderFoundations();
+  renderTableau();
+  document.getElementById('moves').textContent=moves;
+}
+
+function checkWin(){
+  for(var i=0;i<4;i++){
+    if(foundations[i].length<13) return;
+  }
+  document.getElementById('finalTime').textContent=formatTime(seconds);
+  document.getElementById('finalMoves').textContent=moves;
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+var board=document.getElementById('board');
+
+board.addEventListener('click',function(e){
+  var el=e.target.closest('[data-zone]');
+  if(!el) return;
+  var zone=el.dataset.zone;
+  if(zone==='stock'){
+    selection=null;
+    drawThree();
+    return;
+  }
+  if(zone==='waste'){
+    if(!selection) selection={type:'waste'};
+    else selection=null;
+    render();
+    return;
+  }
+  if(zone==='foundation'){
+    var f=parseInt(el.dataset.index,10);
+    if(selection&&selection.type==='waste'){
+      if(moveWasteToFoundation(f)){selection=null;render();checkWin();}
+      else{selection=null;render();}
+    }else if(selection&&selection.type==='tableau'){
+      var arr=tableau[selection.col];
+      if(arr.length&&selection.idx===arr.length-1&&arr[selection.idx].faceUp){
+        if(moveTableauToFoundation(selection.col,f)){selection=null;render();checkWin();}
+        else{selection=null;render();}
+      }else{selection=null;render();}
+    }else{render();}
+    return;
+  }
+  if(zone==='tableau'){
+    var col=parseInt(el.dataset.col,10);
+    var index=el.dataset.index!==undefined?parseInt(el.dataset.index,10):-1;
+    if(index===-1){
+      if(selection&&selection.type==='tableau'){
+        if(moveStack(selection.col,selection.idx,col)){selection=null;render();checkWin();}
+        else{selection=null;render();}
+      }else if(selection&&selection.type==='waste'){
+        if(moveWasteToTableau(col)){selection=null;render();checkWin();}
+        else{selection=null;render();}
+      }else{render();}
+      return;
+    }
+    var card=tableau[col][index];
+    if(!card.faceUp){selection=null;render();return;}
+    if(!selection){
+      selection={type:'tableau',col:col,idx:index};
+      render();
+      return;
+    }
+    if(selection.type==='tableau'){
+      if(selection.col===col&&index>=selection.idx){selection=null;render();return;}
+      if(moveStack(selection.col,selection.idx,col)){selection=null;render();checkWin();}
+      else{selection=null;render();}
+      return;
+    }
+    if(selection.type==='waste'){
+      if(moveWasteToTableau(col)){selection=null;render();checkWin();}
+      else{selection=null;render();}
+      return;
+    }
+  }
+});
+
+board.addEventListener('dblclick',function(e){
+  var el=e.target.closest('[data-zone]');
+  if(!el) return;
+  var zone=el.dataset.zone;
+  if(zone==='tableau'){
+    var col=parseInt(el.dataset.col,10);
+    if(tryAutoFoundation(col)){selection=null;render();checkWin();}
+  }else if(zone==='waste'){
+    if(tryWasteFoundation()){selection=null;render();checkWin();}
+  }
+});
+
+document.getElementById('newGameBtn').addEventListener('click',function(){newGame();render();});
+document.getElementById('overlayNewGame').addEventListener('click',function(){newGame();render();});
+
+setInterval(function(){
+  seconds++;
+  document.getElementById('time').textContent=formatTime(seconds);
+},1000);
+
+newGame();
+render();
+</script>
+</body>
+</html>

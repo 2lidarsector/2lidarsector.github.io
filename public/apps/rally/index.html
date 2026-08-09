@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rally</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: #0b0d1a; color: #e7e9ff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  h1 { font-size: 26px; }
+  .hud { display: flex; gap: 34px; font-size: 15px; color: #8b90c4; }
+  .hud b { color: #34d399; font-size: 20px; }
+  canvas { background: #12142a; border: 1px solid #262a52; border-radius: 12px; }
+  button { padding: 10px 22px; border: none; border-radius: 10px; background: linear-gradient(135deg,#a855f7,#6366f1); color: #fff; font-weight: 700; cursor: pointer; }
+  .keys { color: #8b90c4; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>Rally</h1>
+<div class="hud"><span>You: <b id="p1">0</b></span><span id="status" style="color:#f472b6">First to 7</span><span>AI: <b id="p2">0</b></span></div>
+<canvas id="c" width="700" height="400"></canvas>
+<button id="restart">Restart</button>
+<p class="keys">W / S to move. P to pause.</p>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const p1El = document.getElementById("p1"), p2El = document.getElementById("p2");
+const statusEl = document.getElementById("status");
+
+const W = 700, H = 400, PW = 12, PH = 80, PAD = 24;
+let p1y, p2y, bx, by, bvx, bvy, s1, s2, paused, over, raf;
+const SPEED = 5;
+
+function reset(serveTo) {
+  p1y = H / 2 - PH / 2; p2y = H / 2 - PH / 2;
+  bx = W / 2; by = H / 2;
+  const dir = serveTo === 1 ? 1 : -1;
+  bvx = dir * SPEED * 1.15;
+  bvy = (Math.random() * 2 - 1) * SPEED * 0.7;
+  paused = false; over = false;
+  statusEl.textContent = s1 === 7 || s2 === 7 ? "Game Over" : "First to 7";
+  cancelAnimationFrame(raf);
+  loop();
+}
+
+const keys = {};
+window.addEventListener("keydown", e => { keys[e.key.toLowerCase()] = true; if (e.key.toLowerCase() === "p") paused = !paused; });
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+function loop() {
+  raf = requestAnimationFrame(loop);
+  if (paused || over) { draw(); return; }
+
+  if (keys["w"]) p1y -= 7;
+  if (keys["s"]) p1y += 7;
+  p1y = Math.max(0, Math.min(H - PH, p1y));
+
+  // AI
+  const target = by - PH / 2;
+  const aiSpeed = 4.6;
+  if (p2y + PH / 2 < target - 8) p2y += aiSpeed;
+  else if (p2y + PH / 2 > target + 8) p2y -= aiSpeed;
+
+  bx += bvx; by += bvy;
+
+  if (by < 0) { by = 0; bvy = Math.abs(bvy); }
+  if (by > H) { by = H; bvy = -Math.abs(bvy); }
+
+  if (bvx < 0 && bx < PAD + PW && by > p1y && by < p1y + PH) {
+    bx = PAD + PW;
+    bvx = Math.abs(bvx) + 0.4;
+    bvy += (Math.random() * 2 - 1) * 1.4;
+  } else if (bvx > 0 && bx > W - PAD - PW && by > p2y && by < p2y + PH) {
+    bx = W - PAD - PW;
+    bvx = -Math.abs(bvx) - 0.4;
+    bvy += (Math.random() * 2 - 1) * 1.4;
+  }
+
+  if (bx < 0) { s2++; p2El.textContent = s2; endRally(2); }
+  if (bx > W) { s1++; p1El.textContent = s1; endRally(1); }
+
+  draw();
+}
+
+function endRally(scorer) {
+  if (s1 === 7 || s2 === 7) { over = true; statusEl.textContent = scorer === 1 ? "You win!" : "AI wins!"; return; }
+  reset(scorer);
+}
+
+function draw() {
+  ctx.fillStyle = "#12142a"; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "#262a52"; ctx.lineWidth = 3; ctx.setLineDash([8, 12]);
+  ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#a855f7"; ctx.fillRect(PAD, p1y, PW, PH);
+  ctx.fillStyle = "#6366f1"; ctx.fillRect(W - PAD - PW, p2y, PW, PH);
+  ctx.fillStyle = "#e7e9ff"; ctx.beginPath(); ctx.arc(bx, by, 9, 0, Math.PI * 2); ctx.fill();
+}
+
+document.getElementById("restart").addEventListener("click", () => { s1 = 0; s2 = 0; p1El.textContent = 0; p2El.textContent = 0; reset(1); });
+s1 = 0; s2 = 0; reset(1);
+</script>
+</body>
+</html>
