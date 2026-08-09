@@ -137,6 +137,7 @@
       <h1>Admin dashboard<small>access keys &amp; usage</small></h1>
       <div class="actions">
         <span class="db-badge hidden" id="db-badge"></span>
+        <span class="db-badge warn" id="ver-badge"></span>
         <button id="btn-refresh">Refresh</button>
         <button id="btn-open-app">Open site</button>
       </div>
@@ -232,6 +233,7 @@
     }
 
     function render(d) {
+      document.getElementById("ver-badge").textContent = "v" + (d.v || "?");
       var dbBadge = document.getElementById("db-badge");
       if (d.db) {
         var txt = d.db.connected ? "DB connected" : d.db.configured ? "DB error: " + (d.db.error || "?") : "No DB (in-memory keys)";
@@ -342,6 +344,7 @@
           return;
         }
         if (res.d && res.d.ok) render(res.d);
+        else if (res.d && res.d.v) { document.getElementById("ver-badge").textContent = "v" + res.d.v; setStatus("Session expired or admin key invalid.", true); }
         else setStatus((res.d && res.d.error) || "Failed to load.", true);
       }).catch(function () { setStatus("Network error.", true); });
     }

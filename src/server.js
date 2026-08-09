@@ -9,6 +9,8 @@ import { server as wisp } from "@mercuryworkshop/wisp-js/server";
 import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
 import * as store from "./db.js";
 
+const APP_VERSION = "027c6b6";
+
 const publicPath = join(process.cwd(), "public");
 const keysPath = join(process.cwd(), "keys.txt");
 
@@ -196,7 +198,7 @@ app.get("/login.html", (req, res) => {
 });
 
 app.get("/api/auth", (req, res) => {
-  res.json({ ok: true, authed: authed(req) });
+  res.json({ ok: true, authed: authed(req), v: APP_VERSION });
 });
 
 app.post("/api/login", async (req, res) => {
