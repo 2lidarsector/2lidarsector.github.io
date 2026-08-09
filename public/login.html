@@ -101,7 +101,15 @@
     var next = params.get("next") || "/app.html";
 
     function go() {
-      location.href = next;
+      // Some CDNs (bunny.net) drop Set-Cookie on POST. Carry the session token
+      // in the URL as a fallback so the next page load can set the cookie.
+      var t = sessionStorage.getItem("arx_token") || "";
+      if (t && next.indexOf("auth=") === -1) {
+        var sep = next.indexOf("?") === -1 ? "?" : "&";
+        location.href = next + sep + "auth=" + encodeURIComponent(t);
+      } else {
+        location.href = next;
+      }
     }
 
     function makeFingerprint() {
@@ -165,7 +173,11 @@
       })
         .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
         .then(function (res) {
-          if (res.status === 200 && res.d && res.d.ok) { go(); return; }
+          if (res.status === 200 && res.d && res.d.ok) {
+            try { sessionStorage.setItem("arx_token", res.d.token); } catch (e) {}
+            go();
+            return;
+          }
           err.textContent = (res.d && res.d.error) || "Invalid access key.";
           btn.disabled = false;
           document.getElementById("key").value = "";

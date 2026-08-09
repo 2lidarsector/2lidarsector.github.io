@@ -213,7 +213,7 @@ app.post("/api/login", async (req, res) => {
     sessions.set(token, { exp: Date.now() + SESSION_TTL_MS, key, ip, device, ua, loginAt: Date.now(), lastSeen: Date.now() });
     recordLogin(key, ip, device, ua);
     res.setHeader("Set-Cookie", cookieFor(token));
-    res.json({ ok: true });
+    res.json({ ok: true, token });
   } else {
     recordFail(ip);
     res.status(401).json({ ok: false, error: "Invalid access key" });
@@ -407,6 +407,18 @@ app.post("/api/admin/kick", requireAdmin, async (req, res) => {
 // Gate everything else (static files, health check, everything) behind a session.
 app.use((req, res, next) => {
   if (authed(req)) return next();
+  // CDN fallback: some CDNs (bunny.net) drop Set-Cookie on POST, so the login
+  // page can carry the session token in the URL instead. On this page load we
+  // set the cookie normally and bounce to the clean URL.
+  const t = req.query && req.query.auth;
+  if (typeof t === "string" && t.length) {
+    const s = sessions.get(t);
+    if (s && s.exp > Date.now()) {
+      s.lastSeen = Date.now();
+      res.setHeader("Set-Cookie", cookieFor(t));
+      return res.redirect(req.path || "/app.html");
+    }
+  }
   if (req.accepts("html")) {
     const nextUrl = encodeURIComponent(req.originalUrl || "/app.html");
     return res.redirect("/login.html?next=" + nextUrl);
