@@ -715,6 +715,8 @@ window.ARX = window.ARX || {};
     showKeysPanel();
     setKeysStatus("");
   });
+  var adminDashBtn = document.getElementById("btn-admin-dashboard");
+  if (adminDashBtn) adminDashBtn.addEventListener("click", function () { location.href = "/admin.html"; });
   if (keysUnlockBtn) keysUnlockBtn.addEventListener("click", function () {
     storedAdminKey = (keysAdminInput ? keysAdminInput.value : "").trim();
     if (!storedAdminKey) {

@@ -63,6 +63,11 @@ export async function removeKey(id) {
   await p.query("DELETE FROM access_keys WHERE id = ?", [id]);
 }
 
+export async function removeKeyByValue(key) {
+  const p = await getPool();
+  await p.query("DELETE FROM access_keys WHERE key_value = ?", [key]);
+}
+
 export async function keyExists(key) {
   const p = await getPool();
   const [rows] = await p.query("SELECT 1 FROM access_keys WHERE key_value = ? LIMIT 1", [key]);

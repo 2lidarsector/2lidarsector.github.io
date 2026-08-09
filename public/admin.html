@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230f121d'/><text x='50' y='72' font-size='62' font-family='Georgia,serif' font-weight='bold' fill='%232dd4bf' text-anchor='middle'>&#960;</text></svg>" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 500px at 50% -10%, rgba(109, 125, 246, 0.14), transparent 60%),
+      radial-gradient(900px 400px at 85% 110%, rgba(45, 212, 191, 0.08), transparent 55%),
+      #0a0c14;
+    color: #e8eaf0;
+    padding: 28px 20px 60px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; letter-spacing: -0.02em; }
+  header h1 small { color: #78808f; font-weight: 500; font-size: 13px; margin-left: 10px; }
+  .actions { display: flex; gap: 10px; }
+  button {
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: #12161f;
+    color: #e8eaf0;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: #1a2030; border-color: rgba(148, 163, 184, 0.45); }
+  button.primary { background: #7a86f8; border-color: #545fd4; color: #fff; }
+  button.primary:hover { background: #8f9aff; }
+  button.danger { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.35); color: #f87171; }
+  button.danger:hover { background: rgba(248, 113, 113, 0.2); }
+  .unlock {
+    background: rgba(17, 21, 30, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 420px;
+    margin: 8vh auto 0;
+  }
+  .unlock h2 { font-size: 18px; margin-bottom: 6px; }
+  .unlock p { font-size: 13px; color: #78808f; margin-bottom: 18px; }
+  .unlock input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: #0d1017;
+    color: #e8eaf0;
+    font-size: 15px;
+    outline: none;
+  }
+  .unlock input:focus { border-color: #7a86f8; }
+  .unlock button { width: 100%; margin-top: 14px; }
+  .err { margin-top: 12px; font-size: 13px; color: #f87171; min-height: 16px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 26px; }
+  .card {
+    background: rgba(17, 21, 30, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .card .num { font-size: 30px; font-weight: 750; letter-spacing: -0.02em; }
+  .card .lbl { font-size: 12.5px; color: #78808f; margin-top: 4px; }
+  .card.alert .num { color: #f87171; }
+  .panel {
+    background: rgba(17, 21, 30, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 22px;
+  }
+  .panel h2 { font-size: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.09); flex-wrap: wrap; }
+  .row:last-child { border-bottom: 0; }
+  .row .kv { flex: 1; min-width: 200px; }
+  .row .kv b { font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; word-break: break-all; }
+  .row .kv .sub { font-size: 12px; color: #78808f; margin-top: 3px; }
+  .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .badge.share { background: rgba(248, 113, 113, 0.18); color: #f87171; }
+  .badge.ok { background: rgba(45, 212, 191, 0.14); color: #2dd4bf; }
+  .badge.ips { background: rgba(148, 163, 184, 0.14); color: #a6adbb; }
+  .addbar { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+  .addbar input {
+    flex: 1;
+    min-width: 220px;
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: #0d1017;
+    color: #e8eaf0;
+    font-size: 14px;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    outline: none;
+  }
+  .addbar input:focus { border-color: #7a86f8; }
+  .empty { color: #78808f; font-size: 13px; padding: 8px 0; }
+  .list .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.09); flex-wrap: wrap; }
+  .list .item:last-child { border-bottom: 0; }
+  .list .item .who { font-size: 12.5px; }
+  .list .item .who b { font-family: "JetBrains Mono", Consolas, monospace; }
+  .list .item .when { font-size: 12px; color: #78808f; }
+  .hint { font-size: 12px; color: #5d6470; margin-top: 14px; }
+  .status { font-size: 13px; color: #2dd4bf; margin-top: 12px; min-height: 16px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Admin dashboard<small>access keys &amp; usage</small></h1>
+      <div class="actions">
+        <button id="btn-refresh">Refresh</button>
+        <button id="btn-open-app">Open site</button>
+      </div>
+    </header>
+
+    <div class="unlock" id="unlock-card">
+      <h2>Admin access</h2>
+      <p>Enter the admin key to manage access keys and view usage.</p>
+      <input type="password" id="admin-key" placeholder="Admin key" autocomplete="off" spellcheck="false" />
+      <button id="btn-unlock">Unlock</button>
+      <p class="err" id="unlock-err"></p>
+    </div>
+
+    <div id="dashboard" style="display:none">
+      <div class="cards">
+        <div class="card"><div class="num" id="stat-keys">0</div><div class="lbl">Total keys</div></div>
+        <div class="card"><div class="num" id="stat-active">0</div><div class="lbl">Active sessions</div></div>
+        <div class="card"><div class="num" id="stat-ips">0</div><div class="lbl">Unique IPs online</div></div>
+        <div class="card alert" id="stat-flag-card"><div class="num" id="stat-flagged">0</div><div class="lbl">Possibly shared</div></div>
+      </div>
+
+      <div class="panel" id="flagged-panel" style="display:none">
+        <h2>&#9888; Possibly shared keys</h2>
+        <div class="list" id="flagged-list"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Access keys</h2>
+        <div class="list" id="keys-list"></div>
+        <div class="addbar">
+          <input type="text" id="new-key" placeholder="New key (paste or generate)" autocomplete="off" spellcheck="false" />
+          <button id="btn-generate">Generate</button>
+          <button class="primary" id="btn-add">Add key</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Recent logins</h2>
+        <div class="list" id="logins-list"></div>
+      </div>
+
+      <p class="hint">Auto-refreshes every 15s. A key is flagged as "possibly shared" when it has multiple concurrent sessions or multiple IPs. Use Kick to force sign-out.</p>
+      <p class="status" id="status"></p>
+    </div>
+  </div>
+
+<script>
+  (function () {
+    var adminKey = sessionStorage.getItem("arx_admin_key") || "";
+    var unlockCard = document.getElementById("unlock-card");
+    var dash = document.getElementById("dashboard");
+    var adminInput = document.getElementById("admin-key");
+    var unlockErr = document.getElementById("unlock-err");
+    var status = document.getElementById("status");
+    var keysList = document.getElementById("keys-list");
+    var flaggedList = document.getElementById("flagged-list");
+    var loginsList = document.getElementById("logins-list");
+    var newKeyInput = document.getElementById("new-key");
+    var refreshTimer = null;
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function ago(ts) {
+      if (!ts) return "?";
+      var s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+      if (s < 60) return s + "s ago";
+      var m = Math.floor(s / 60);
+      if (m < 60) return m + "m ago";
+      var h = Math.floor(m / 60);
+      if (h < 24) return h + "h ago";
+      return Math.floor(h / 24) + "d ago";
+    }
+    function setStatus(msg, isErr) {
+      status.textContent = msg || "";
+      status.style.color = isErr ? "#f87171" : "#2dd4bf";
+    }
+    function showDash(show) {
+      unlockCard.style.display = show ? "none" : "";
+      dash.style.display = show ? "" : "none";
+    }
+    function headers() {
+      return { "x-admin-key": adminKey };
+    }
+    function api(url, opts) {
+      opts = opts || {};
+      opts.headers = Object.assign(headers(), opts.headers || {});
+      return fetch(url, opts).then(function (r) {
+        return r.json().then(function (d) { return { status: r.status, d: d }; });
+      });
+    }
+
+    function render(d) {
+      document.getElementById("stat-keys").textContent = d.totalKeys;
+      document.getElementById("stat-active").textContent = d.activeSessions;
+      document.getElementById("stat-ips").textContent = d.uniqueIps;
+      document.getElementById("stat-flagged").textContent = d.flagged.length;
+      document.getElementById("stat-flag-card").classList.toggle("alert", d.flagged.length > 0);
+
+      // flagged
+      flaggedList.innerHTML = "";
+      var fp = document.getElementById("flagged-panel");
+      if (d.flagged.length) {
+        fp.style.display = "";
+        d.flagged.forEach(function (k) {
+          var row = document.createElement("div");
+          row.className = "item";
+          var who = document.createElement("div");
+          who.className = "who";
+          who.innerHTML = "<b>" + esc(k.key) + "</b> &nbsp;&middot;&nbsp; " + k.sessionCount + " session(s), " + k.ips.length + " IP(s) &mdash; " + esc(k.ips.join(", ")) + " &nbsp;&middot;&nbsp; last " + ago(k.lastSeen);
+          var kick = document.createElement("button");
+          kick.className = "danger";
+          kick.textContent = "Kick";
+          kick.addEventListener("click", function () { kickKey(k.key); });
+          row.appendChild(who);
+          row.appendChild(kick);
+          flaggedList.appendChild(row);
+        });
+      } else {
+        fp.style.display = "none";
+      }
+
+      // keys
+      keysList.innerHTML = "";
+      if (!d.keys.length) {
+        var e = document.createElement("div");
+        e.className = "empty";
+        e.textContent = "No active sessions yet.";
+        keysList.appendChild(e);
+      } else {
+        d.keys.forEach(function (k) {
+          var row = document.createElement("div");
+          row.className = "row";
+          var kv = document.createElement("div");
+          kv.className = "kv";
+          var shareBadge = k.sharing ? '<span class="badge share">SHARED</span> ' : '<span class="badge ok">OK</span> ';
+          var ipBadge = '<span class="badge ips">' + k.ips.length + " IP</span> ";
+          kv.innerHTML = "<b>" + esc(k.key) + "</b><br><div class='sub'>" + ipBadge + k.sessionCount + " session(s) &middot; " + esc(k.ips.join(", ") || "no IPs") + " &middot; last " + ago(k.lastSeen) + "</div>";
+          var kickBtn = document.createElement("button");
+          kickBtn.className = "danger";
+          kickBtn.textContent = "Kick";
+          kickBtn.addEventListener("click", function () { kickKey(k.key); });
+          var delBtn = document.createElement("button");
+          delBtn.textContent = "Remove";
+          delBtn.addEventListener("click", function () { removeKey(k.key); });
+          row.appendChild(kv);
+          row.appendChild(kickBtn);
+          row.appendChild(delBtn);
+          keysList.appendChild(row);
+        });
+      }
+
+      // recent logins
+      loginsList.innerHTML = "";
+      if (!d.recentLogins.length) {
+        var e2 = document.createElement("div");
+        e2.className = "empty";
+        e2.textContent = "No logins yet.";
+        loginsList.appendChild(e2);
+      } else {
+        d.recentLogins.forEach(function (l) {
+          var row = document.createElement("div");
+          row.className = "item";
+          var who = document.createElement("div");
+          who.className = "who";
+          who.innerHTML = "<b>" + esc(l.key) + "</b> &nbsp;from&nbsp; " + esc(l.ip);
+          var when = document.createElement("div");
+          when.className = "when";
+          when.textContent = new Date(l.at).toLocaleString();
+          row.appendChild(who);
+          row.appendChild(when);
+          loginsList.appendChild(row);
+        });
+      }
+    }
+
+    function load() {
+      api("/api/admin/overview").then(function (res) {
+        if (res.status === 403) {
+          adminKey = "";
+          sessionStorage.removeItem("arx_admin_key");
+          showDash(false);
+          setStatus("");
+          return;
+        }
+        if (res.d && res.d.ok) render(res.d);
+        else setStatus((res.d && res.d.error) || "Failed to load.", true);
+      }).catch(function () { setStatus("Network error.", true); });
+    }
+
+    function kickKey(key) {
+      if (!confirm("Kick all sessions for key '" + key + "'?")) return;
+      api("/api/admin/kick", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
+        .then(function (res) {
+          setStatus(res.d && res.d.ok ? "Kicked " + res.d.removed + " session(s)." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
+          load();
+        });
+    }
+
+    function removeKey(key) {
+      if (!confirm("Remove key '" + key + "'? This does not kick live sessions.")) return;
+      api("/api/admin/keys/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
+        .then(function (res) {
+          setStatus(res.d && res.d.ok ? "Removed." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
+          load();
+        });
+    }
+
+    document.getElementById("btn-unlock").addEventListener("click", function () {
+      adminKey = adminInput.value.trim();
+      if (!adminKey) { unlockErr.textContent = "Enter the admin key."; return; }
+      unlockErr.textContent = "";
+      sessionStorage.setItem("arx_admin_key", adminKey);
+      load();
+      showDash(true);
+    });
+    adminInput.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("btn-unlock").click(); });
+
+    document.getElementById("btn-refresh").addEventListener("click", load);
+    document.getElementById("btn-open-app").addEventListener("click", function () { location.href = "/app.html"; });
+    document.getElementById("btn-generate").addEventListener("click", function () {
+      var bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      newKeyInput.value = btoa(String.fromCharCode.apply(null, bytes)).replace(/[+/]/g, "-").replace(/=/g, "");
+    });
+    document.getElementById("btn-add").addEventListener("click", function () {
+      var key = newKeyInput.value.trim();
+      if (!key) { setStatus("Enter a key to add.", true); return; }
+      api("/api/admin/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
+        .then(function (res) {
+          if (res.d && res.d.ok) {
+            newKeyInput.value = "";
+            setStatus("Key added.");
+            load();
+          } else {
+            setStatus((res.d && res.d.error) || "Failed.", true);
+          }
+        });
+    });
+    newKeyInput.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("btn-add").click(); });
+
+    if (adminKey) { showDash(true); load(); }
+
+    refreshTimer = setInterval(function () {
+      if (adminKey) load();
+    }, 15000);
+  })();
+</script>
+</body>
+</html>

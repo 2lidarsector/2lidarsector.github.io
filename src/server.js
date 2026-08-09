@@ -71,7 +71,9 @@ function safeEqual(a, b) {
 
 // ---------- sessions ----------
 
-const sessions = new Map(); // token -> expiresAt
+// token -> { exp, key, ip, loginAt, lastSeen }
+const sessions = new Map();
+const recentLogins = []; // { key, ip, at } newest first, capped
 
 function cookieFor(token) {
   return `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
@@ -95,13 +97,19 @@ function readToken(req) {
 function authed(req) {
   const token = readToken(req);
   if (!token) return false;
-  const exp = sessions.get(token);
-  if (!exp) return false;
-  if (Date.now() > exp) {
+  const s = sessions.get(token);
+  if (!s) return false;
+  if (Date.now() > s.exp) {
     sessions.delete(token);
     return false;
   }
+  s.lastSeen = Date.now();
   return true;
+}
+
+function recordLogin(key, ip) {
+  recentLogins.unshift({ key, ip, at: Date.now() });
+  if (recentLogins.length > 200) recentLogins.length = 200;
 }
 
 // ---------- brute-force throttle ----------
@@ -164,7 +172,8 @@ app.post("/api/login", async (req, res) => {
   const key = req.body && typeof req.body.key === "string" ? req.body.key : "";
   if (await validKey(key)) {
     const token = randomBytes(32).toString("hex");
-    sessions.set(token, Date.now() + SESSION_TTL_MS);
+    sessions.set(token, { exp: Date.now() + SESSION_TTL_MS, key, ip, loginAt: Date.now(), lastSeen: Date.now() });
+    recordLogin(key, ip);
     res.setHeader("Set-Cookie", cookieFor(token));
     res.json({ ok: true });
   } else {
@@ -237,6 +246,99 @@ app.delete("/api/admin/keys/:id", requireAdmin, async (req, res) => {
     console.error("[admin] remove key failed", e);
     res.status(500).json({ error: "database error" });
   }
+});
+
+// Remove a key by its value (used by the admin dashboard).
+app.post("/api/admin/keys/remove", requireAdmin, async (req, res) => {
+  const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
+  if (!key) {
+    res.status(400).json({ error: "Missing key" });
+    return;
+  }
+  try {
+    if (store.dbConfigured()) {
+      await store.removeKeyByValue(key);
+    } else {
+      loadLocalKeys();
+      localKeys = localKeys.filter((k) => !safeEqual(k, key));
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("[admin] remove key by value failed", e);
+    res.status(500).json({ error: "database error" });
+  }
+});
+
+// Admin overview: key usage + account-sharing flags.
+function activeSessions() {
+  const now = Date.now();
+  const out = [];
+  for (const [token, s] of sessions) {
+    if (s.exp <= now) continue;
+    out.push({ token, key: s.key, ip: s.ip, loginAt: s.loginAt, lastSeen: s.lastSeen });
+  }
+  return out;
+}
+
+function summarize() {
+  const active = activeSessions();
+  const byKey = new Map();
+  for (const s of active) {
+    if (!byKey.has(s.key)) byKey.set(s.key, { key: s.key, sessions: [], ips: new Set() });
+    const e = byKey.get(s.key);
+    e.sessions.push(s);
+    e.ips.add(s.ip);
+  }
+  const keys = [];
+  for (const e of byKey.values()) {
+    keys.push({
+      key: e.key,
+      sessionCount: e.sessions.length,
+      ipCount: e.ips.size,
+      ips: [...e.ips],
+      lastSeen: Math.max(...e.sessions.map((s) => s.lastSeen)),
+      sharing: e.sessions.length > 1 || e.ips.size > 1,
+    });
+  }
+  return { active, keys };
+}
+
+app.get("/api/admin/overview", requireAdmin, async (req, res) => {
+  try {
+    const sum = summarize();
+    let totalKeys = 0;
+    if (store.dbConfigured()) {
+      totalKeys = (await store.listKeys()).length;
+    } else {
+      loadLocalKeys();
+      totalKeys = localKeys.length;
+    }
+    res.json({
+      ok: true,
+      totalKeys,
+      activeSessions: sum.active.length,
+      uniqueIps: new Set(sum.active.map((s) => s.ip)).size,
+      keys: sum.keys,
+      flagged: sum.keys.filter((k) => k.sharing),
+      recentLogins: recentLogins.slice(0, 100),
+    });
+  } catch (e) {
+    console.error("[admin] overview failed", e);
+    res.status(500).json({ error: "database error" });
+  }
+});
+
+// Kick all sessions that used a given key (force re-login).
+app.post("/api/admin/kick", requireAdmin, async (req, res) => {
+  const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
+  let removed = 0;
+  for (const [token, s] of sessions) {
+    if (s.key === key) {
+      sessions.delete(token);
+      removed++;
+    }
+  }
+  res.json({ ok: true, removed });
 });
 
 // Gate everything else (static files, health check, everything) behind a session.
