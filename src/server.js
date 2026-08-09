@@ -363,8 +363,19 @@ async function summarize() {
 app.get("/api/admin/overview", requireAdmin, async (req, res) => {
   try {
     const sum = await summarize();
+    let dbOk = false;
+    let dbError = "";
+    if (store.dbConfigured()) {
+      try {
+        await store.countKeys();
+        dbOk = true;
+      } catch (e) {
+        dbError = e.message;
+      }
+    }
     res.json({
       ok: true,
+      db: { configured: store.dbConfigured(), connected: dbOk, host: process.env.DB_HOST || "", error: dbError },
       totalKeys: sum.keys.length,
       activeSessions: sum.active.length,
       uniqueIps: new Set(sum.active.map((s) => s.ip)).size,

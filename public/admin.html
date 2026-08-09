@@ -117,6 +117,18 @@
   .list .item .when { font-size: 12px; color: #78808f; }
   .hint { font-size: 12px; color: #5d6470; margin-top: 14px; }
   .status { font-size: 13px; color: #2dd4bf; margin-top: 12px; min-height: 16px; }
+  .db-badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .db-badge.ok { background: rgba(45, 212, 191, 0.14); color: #2dd4bf; }
+  .db-badge.err { background: rgba(248, 113, 113, 0.18); color: #f87171; }
+  .db-badge.warn { background: rgba(250, 204, 21, 0.14); color: #facc15; }
+  .hidden { display: none; }
 </style>
 </head>
 <body>
@@ -124,6 +136,7 @@
     <header>
       <h1>Admin dashboard<small>access keys &amp; usage</small></h1>
       <div class="actions">
+        <span class="db-badge hidden" id="db-badge"></span>
         <button id="btn-refresh">Refresh</button>
         <button id="btn-open-app">Open site</button>
       </div>
@@ -219,6 +232,13 @@
     }
 
     function render(d) {
+      var dbBadge = document.getElementById("db-badge");
+      if (d.db) {
+        var txt = d.db.connected ? "DB connected" : d.db.configured ? "DB error: " + (d.db.error || "?") : "No DB (in-memory keys)";
+        dbBadge.textContent = txt;
+        dbBadge.className = "db-badge " + (d.db.connected ? "ok" : d.db.configured ? "err" : "warn");
+        dbBadge.style.display = "";
+      }
       document.getElementById("stat-keys").textContent = d.totalKeys;
       document.getElementById("stat-active").textContent = d.activeSessions;
       document.getElementById("stat-ips").textContent = d.uniqueIps;
