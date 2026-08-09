@@ -322,13 +322,9 @@ server.on("listening", () => {
   if (store.dbConfigured()) {
     try {
       await store.ensureTable();
-      if (localKeys.length && (await store.countKeys()) === 0) {
-        for (const k of localKeys) {
-          try {
-            await store.addKey(k);
-          } catch (e) {}
-        }
-        console.log(`[auth] seeded ${localKeys.length} local key(s) into the database`);
+      if (localKeys.length) {
+        await store.ensureKeys(localKeys);
+        console.log(`[auth] ensured ${localKeys.length} key(s) from env are present in the database`);
       }
     } catch (e) {
       console.error("[auth] database init failed (keys will not come from the DB)", e);

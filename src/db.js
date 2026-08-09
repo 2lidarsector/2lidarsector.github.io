@@ -51,6 +51,13 @@ export async function addKey(key) {
   await p.query("INSERT INTO access_keys (key_value) VALUES (?)", [key]);
 }
 
+export async function ensureKeys(keys) {
+  const p = await getPool();
+  for (const key of keys) {
+    await p.query("INSERT IGNORE INTO access_keys (key_value) VALUES (?)", [key]);
+  }
+}
+
 export async function removeKey(id) {
   const p = await getPool();
   await p.query("DELETE FROM access_keys WHERE id = ?", [id]);
