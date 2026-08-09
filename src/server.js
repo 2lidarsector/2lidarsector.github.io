@@ -217,8 +217,12 @@ app.get("/api/auth", (req, res) => {
 // CDN-proof auth handoff. bunny.net pull zones ignore query strings when
 // caching, so a `?auth=<token>` URL can still get served a stale cached copy
 // of "/". Putting the token in the PATH (/auth/<token>) makes each handoff a
-// unique URL that no CDN could have cached. We set the cookie here and bounce
-// to the clean destination.
+// unique URL that no CDN could have cached.
+//
+// We deliberately respond with a 200 HTML page (not a 302) because some CDNs
+// (bunny.net) drop or mishandle Set-Cookie on redirect responses. A Set-Cookie
+// on a normal 200 page is forwarded reliably; the tiny page then JS-redirects
+// to the clean destination with the session cookie now in place.
 app.get("/auth/:token", (req, res) => {
   const t = req.params.token || "";
   const s = sessions.get(t);
@@ -229,7 +233,13 @@ app.get("/auth/:token", (req, res) => {
   res.setHeader("Set-Cookie", cookieFor(t));
   let next = typeof req.query.next === "string" ? req.query.next : "";
   if (!next.startsWith("/") || next.startsWith("//")) next = "/app.html";
-  res.redirect(next);
+  const target = JSON.stringify(next);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(
+    "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Loading\u2026</title></head>" +
+    "<body><script>location.replace(" + target + ");</script></body></html>"
+  );
 });
 
 app.post("/api/login", async (req, res) => {
