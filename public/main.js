@@ -600,6 +600,7 @@ function onFrameLoad(tab) {
       updateAddressBar();
       renderTabs();
     }
+    saveSession();
   } catch (e) {}
 }
 
@@ -662,6 +663,7 @@ function openTab(url, title, opts) {
   tabs.push(tab);
   renderTabs();
   activateTab(tab.id, !!opts.proxy);
+  saveSession();
 }
 
 function closeTab(id) {
@@ -675,12 +677,14 @@ function closeTab(id) {
   } catch (e) {}
   tabs.splice(idx, 1);
   if (tabs.length === 0) {
+    saveSession();
     showHome();
     return;
   }
   const next = tabs[Math.min(idx, tabs.length - 1)];
   renderTabs();
   activateTab(next.id);
+  saveSession();
 }
 
 function pinTab(id, pinned) {
@@ -688,6 +692,71 @@ function pinTab(id, pinned) {
   if (!tab) return;
   tab.pinned = !!pinned;
   renderTabs();
+  saveSession();
+}
+
+// ---- session restore ----
+
+const SESSION_KEY = "arx-session";
+
+function sessionEnabled() {
+  return !!(window.ARX && ARX.settings && ARX.settings.sessionRestore && ARX.settings.sessionRestore());
+}
+
+function saveSession() {
+  if (!sessionEnabled()) {
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch (e) {}
+    return;
+  }
+  try {
+    const data = {
+      active: activeTabId,
+      tabs: tabs
+        .filter((t) => !t.incognito)
+        .map((t) => ({
+          id: t.id,
+          title: t.title,
+          url: t.url,
+          local: !!t.local,
+          cloak: t.cloak || null,
+          pinned: !!t.pinned,
+        })),
+    };
+    if (data.tabs.length) localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch (e) {}
+}
+
+function restoreSession() {
+  if (!sessionEnabled()) return;
+  let data = null;
+  try {
+    data = JSON.parse(localStorage.getItem(SESSION_KEY));
+  } catch (e) {}
+  if (!data || !Array.isArray(data.tabs) || !data.tabs.length) return;
+  data.tabs.forEach((t) => {
+    if (!t.url) return;
+    const n = parseInt(String(t.id).slice(1), 10);
+    if (n > tabSeq) tabSeq = n;
+    tabs.push({
+      id: t.id,
+      title: t.title || t.url,
+      url: t.url,
+      loadUrl: t.url,
+      local: !!t.local,
+      proxied: !t.local,
+      cloak: t.cloak || null,
+      pinned: !!t.pinned,
+      incognito: false,
+      frame: null,
+    });
+  });
+  if (!tabs.length) return;
+  renderTabs();
+  const active = data.active && tabs.some((t) => t.id === data.active) ? data.active : tabs[tabs.length - 1].id;
+  activateTab(active, true);
 }
 
 function homeUrl() {
@@ -732,6 +801,7 @@ function fullscreenTab(id) {
 
 function showHome() {
   if (window.ARX && ARX.settings) ARX.settings.applyCloak();
+  exitFocusMode();
   activeTabId = null;
   setActiveFrame(null);
   renderTabs();
@@ -761,9 +831,13 @@ function cardHtml(g) {
     ? g.icon
     : `<span class="thumb-emoji">${g.emoji ? esc(g.emoji) : "&#127918;"}</span>`;
   const isDownload = !!g.download;
+  const favOn = isFav(g.name);
+  const href = g.download || g.href || g.path;
   return `
     <div class="app-card-wrap${g.custom ? " custom-card" : ""}">
-      <a class="app-card${isDownload ? " download-card" : ""}" href="${esc(g.download || g.path)}" ${isDownload ? `download="${esc(g.name + ".html")}"` : ""} data-cloak="${esc(g.cloak || "")}">
+      <a class="app-card${isDownload ? " download-card" : ""}" href="${esc(href)}" ${isDownload ? `download="${esc(g.name + ".html")}"` : ""} data-cloak="${esc(g.cloak || "")}">
+        <button class="card-fav${favOn ? " on" : ""}" title="${favOn ? "Remove from favorites" : "Add to favorites"}" data-fav="${esc(g.name)}">${favOn ? "&#9733;" : "&#9734;"}</button>
+        <button class="card-disguise" title="Tab disguise" data-disguise="${esc(href)}">&#128374;</button>
         ${g.custom ? `<button class="card-remove" title="Remove game" data-remove="${esc(g.name)}">&#10005;</button>` : ""}
         <div class="app-thumb" style="background: linear-gradient(135deg, ${g.grad[0]}, ${g.grad[1]})">
           ${thumb}
@@ -830,18 +904,158 @@ async function openGameCamouflaged(href, name, cloak) {
 
 function openGame(href, name, cloak) {
   const isLocal = href.startsWith("/");
+  const saved = savedGameCloak(href);
+  const useCloak = saved || cloak;
   if (embedMode()) {
     if (camouflageMode() !== "off") {
-      openGameCamouflaged(href, name, cloak);
+      openGameCamouflaged(href, name, useCloak);
       return;
     }
-    openTab(href, name, { proxy: !isLocal, cloak: cloak });
+    openTab(href, name, { proxy: !isLocal, cloak: useCloak });
   } else {
     try {
       window.open(isLocal ? location.origin + href : href, "_blank");
     } catch (e) {}
   }
 }
+
+// ---- favorites ----
+
+const FAV_KEY = "arx-favorites";
+
+function favGames() {
+  try {
+    const raw = localStorage.getItem(FAV_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveFavs(list) {
+  try {
+    localStorage.setItem(FAV_KEY, JSON.stringify(list.slice(0, 24)));
+  } catch (e) {}
+}
+
+function isFav(name) {
+  return favGames().some((f) => f.name === name);
+}
+
+function toggleFav(g) {
+  const list = favGames();
+  const i = list.findIndex((f) => f.name === g.name);
+  if (i >= 0) {
+    list.splice(i, 1);
+  } else {
+    list.unshift({
+      name: g.name,
+      href: g.href || g.path || g.download || "",
+      cloak: g.cloak || "",
+      grad: g.grad || ["#6d7df6", "#2dd4bf"],
+      icon: g.icon || "",
+      emoji: g.emoji || "",
+      download: g.download || "",
+    });
+  }
+  saveFavs(list);
+  renderFavs();
+  renderLibrary();
+  renderRecent();
+}
+
+function renderFavs() {
+  const section = document.getElementById("fav-section");
+  const grid = document.getElementById("fav-grid");
+  if (!section || !grid) return;
+  const favs = favGames();
+  section.classList.toggle("hidden", favs.length === 0);
+  grid.innerHTML = favs.map(cardHtml).join("");
+}
+
+// ---- per-game disguise ----
+
+const GAME_CLOAK_KEY = "arx-game-cloaks";
+
+function gameCloaks() {
+  try {
+    const raw = localStorage.getItem(GAME_CLOAK_KEY);
+    const m = raw ? JSON.parse(raw) : {};
+    return m && typeof m === "object" ? m : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveGameCloak(path, key) {
+  const m = gameCloaks();
+  if (key) m[path] = key;
+  else delete m[path];
+  try {
+    localStorage.setItem(GAME_CLOAK_KEY, JSON.stringify(m));
+  } catch (e) {}
+}
+
+function savedGameCloak(path) {
+  return gameCloaks()[path] || null;
+}
+
+function cloakOptions() {
+  if (!window.ARX || !ARX.settings || !ARX.settings.CLOAKS) return [];
+  return Object.keys(ARX.settings.CLOAKS)
+    .filter((k) => k !== "default")
+    .map((k) => ({ key: k, title: ARX.settings.CLOAKS[k].title }));
+}
+
+function showDisguiseMenu(path, anchor) {
+  closeDisguiseMenu();
+  const menu = document.createElement("div");
+  menu.id = "disguise-menu";
+  menu.className = "disguise-menu";
+  const current = savedGameCloak(path);
+  const opts = cloakOptions();
+  const currentValid = current && opts.some((o) => o.key === current);
+  menu.innerHTML =
+    `<div class="disguise-menu-title">Tab disguise</div>` +
+    opts
+      .map((o) =>
+        `<button class="disguise-opt${currentValid && current === o.key ? " on" : ""}" data-disguise-opt="${o.key}">${currentValid && current === o.key ? "&#10003; " : ""}${esc(o.title)}</button>`
+      )
+      .join("") +
+    (currentValid || current
+      ? `<button class="disguise-opt" data-disguise-opt="">Clear (default)</button>`
+      : "");
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = Math.max(8, Math.min(r.bottom + 6, window.innerHeight - 70)) + "px";
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 210)) + "px";
+  menu.addEventListener("click", (e) => {
+    const btn = e.target.closest(".disguise-opt");
+    if (!btn) return;
+    const key = btn.getAttribute("data-disguise-opt");
+    saveGameCloak(path, key);
+    closeDisguiseMenu();
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (tab && (tab.url === path || tab.loadUrl === path)) {
+      tab.cloak = key || null;
+      applyTabCloak(tab);
+      renderTabs();
+    }
+    renderLibrary();
+    renderRecent();
+  });
+}
+
+function closeDisguiseMenu() {
+  const m = document.getElementById("disguise-menu");
+  if (m) m.remove();
+}
+
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("disguise-menu");
+  if (menu && !menu.contains(e.target)) closeDisguiseMenu();
+});
 
 // ---- panic ----
 
@@ -1026,8 +1240,48 @@ document.getElementById("btn-exit").addEventListener("click", () => {
     try { t.frame && t.frame.remove(); } catch (e) {}
   });
   tabs = [];
+  saveSession();
   showHome();
 });
+
+// ---- add current page to library ----
+
+document.getElementById("btn-save").addEventListener("click", () => {
+  const tab = tabs.find((t) => t.id === activeTabId);
+  if (!tab) return;
+  const addModal = document.getElementById("add-modal");
+  if (!addModal) return;
+  const nameInput = document.getElementById("add-name");
+  const urlInput = document.getElementById("add-url");
+  if (nameInput) nameInput.value = tab.title && tab.title !== tab.url ? tab.title : "";
+  if (urlInput) urlInput.value = tab.url && !tab.url.startsWith("about:") ? tab.url : "";
+  addModal.classList.remove("hidden");
+  if (urlInput) urlInput.focus();
+});
+
+// ---- immersive focus mode ----
+
+const focusExitEl = document.getElementById("focus-exit");
+
+function enterFocusMode() {
+  document.body.classList.add("focus-mode");
+  if (focusExitEl) focusExitEl.classList.remove("hidden");
+}
+
+function exitFocusMode() {
+  document.body.classList.remove("focus-mode");
+  if (focusExitEl) focusExitEl.classList.add("hidden");
+}
+
+document.getElementById("btn-focus").addEventListener("click", () => {
+  const on = !document.body.classList.contains("focus-mode");
+  if (on) enterFocusMode();
+  else exitFocusMode();
+});
+
+if (focusExitEl) {
+  focusExitEl.addEventListener("click", () => exitFocusMode());
+}
 
 // ---- tab bar ----
 
@@ -1056,7 +1310,7 @@ tabBar.addEventListener("contextmenu", (e) => {
   pinTab(tabEl.getAttribute("data-id"), !tabs.find((t) => t.id === tabEl.getAttribute("data-id")).pinned);
 });
 
-// ---- keyboard shortcuts (real-browser feel) ----
+// ---- keyboard shortcuts ----
 
 document.addEventListener(
   "keydown",
@@ -1068,28 +1322,8 @@ document.addEventListener(
         active.tagName === "TEXTAREA" ||
         active.tagName === "SELECT" ||
         active.isContentEditable);
-    if (e.ctrlKey || e.metaKey) {
-      const k = e.key.toLowerCase();
-      if (k === "l") {
-        e.preventDefault();
-        browserAddress.focus();
-        browserAddress.select();
-      } else if (k === "t") {
-        e.preventDefault();
-        newTab();
-      } else if (k === "w") {
-        e.preventDefault();
-        if (activeTabId) closeTab(activeTabId);
-      } else if (k === "tab") {
-        e.preventDefault();
-        if (tabs.length > 1) {
-          const idx = tabs.findIndex((t) => t.id === activeTabId);
-          const next = tabs[(idx + (e.shiftKey ? tabs.length - 1 : 1)) % tabs.length];
-          activateTab(next.id);
-        }
-      }
-    }
     if (e.key === "Escape" && !typing) {
+      exitFocusMode();
       if (!document.getElementById("add-modal").classList.contains("hidden")) {
         document.getElementById("add-modal").classList.add("hidden");
       }
@@ -1203,12 +1437,16 @@ if (clockEl) {
 // ---- what's new ----
 
 const CHANGELOG = [
-  "Browser-style tabs: pin with right-click, Ctrl+T/L/W/Tab shortcuts.",
+  "Favorites row: star any game to pin it to the top of the home page.",
+  "Per-game tab disguise: choose a cloak per game via its menu icon.",
+  "Session restore: reopen your tabs after a refresh (Settings toggle).",
+  "Add any open page to your library from the toolbar.",
+  "Immersive focus mode: hide every part of the UI and just play.",
   "Camouflage mode: wrap games in a fake Google Doc (Settings).",
   "Custom cloaks: set your own tab title + icon.",
   "Transport health dashboard in Settings.",
   "Recently played row on home.",
-  "Incognito tabs via Ctrl+Shift+N or the toolbar button.",
+  "Browser-style tabs: pin with right-click.",
 ];
 
 const NEWS_KEY = "arx-news-dismissed";
@@ -1247,6 +1485,28 @@ document.querySelectorAll(".quick-links a").forEach((a) => {
 
 // ---- library clicks ----
 
+document.addEventListener(
+  "click",
+  (e) => {
+    const favBtn = e.target.closest("[data-fav]");
+    if (favBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const name = favBtn.getAttribute("data-fav");
+      const game = findLibraryGame(name);
+      if (game) toggleFav(game);
+      return;
+    }
+    const disBtn = e.target.closest("[data-disguise]");
+    if (disBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      showDisguiseMenu(disBtn.getAttribute("data-disguise"), disBtn);
+    }
+  },
+  true
+);
+
 function findLibraryGame(name) {
   return library.find((g) => g.name === name) || customGames().find((g) => g.name === name);
 }
@@ -1279,6 +1539,27 @@ document.getElementById("library-grid").addEventListener("click", (e) => {
   renderRecent();
   openGame(href, name, cloak);
 });
+
+// ---- favorites grid ----
+
+const favGrid = document.getElementById("fav-grid");
+
+if (favGrid) {
+  favGrid.addEventListener("click", (e) => {
+    const card = e.target.closest("a.app-card");
+    if (!card) return;
+    if (card.hasAttribute("download")) return;
+    e.preventDefault();
+    const href = card.getAttribute("href");
+    const h3 = card.querySelector("h3");
+    const name = h3 ? h3.textContent : href;
+    const cloak = card.getAttribute("data-cloak") || null;
+    const game = findLibraryGame(name);
+    addRecentGame(name, href, cloak, game && game.grad, game && game.icon, game && (game.emoji || ""));
+    renderRecent();
+    openGame(href, name, cloak);
+  });
+}
 
 // ---- recently played ----
 
@@ -1392,9 +1673,22 @@ function migrateStoredGames() {
       .filter((g) => valid(g.path));
     localStorage.setItem(CUSTOM_KEY, JSON.stringify(customs));
   } catch (e) {}
+  try {
+    const favs = favGames()
+      .map((g) => Object.assign({}, g, {
+        name: OLD_NAME_TO_NEW[g.name] || g.name,
+        href: OLD_PATH_TO_NEW[g.href] || g.href,
+      }))
+      .filter((g) => valid(g.href));
+    localStorage.setItem(FAV_KEY, JSON.stringify(favs.slice(0, 24)));
+  } catch (e) {}
 }
 
 migrateStoredGames();
+
+restoreSession();
+
+renderFavs();
 
 renderRecent();
 

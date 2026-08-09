@@ -638,6 +638,36 @@ body.no-nav .navbar {
   display: none;
 }
 
+body.focus-mode .navbar,
+body.focus-mode .browser-toolbar,
+body.focus-mode .tab-bar {
+  display: none;
+}
+
+#focus-exit {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 80;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(10, 12, 20, 0.7);
+  color: var(--dim);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#focus-exit:hover {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .browser-address {
   flex: 1;
   min-width: 200px;
@@ -813,8 +843,14 @@ body.no-nav .navbar {
 }
 
 .settings-row input[type="text"]::placeholder {
-  color: var(--dim);
-  opacity: 0.6;
+  color: var(--muted);
+}
+
+.settings-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .cloak-custom-inputs {
@@ -1115,7 +1151,7 @@ body.no-nav .navbar {
 .card-remove {
   position: absolute;
   top: 8px;
-  right: 8px;
+  right: 40px;
   z-index: 2;
   width: 26px;
   height: 26px;
@@ -1128,6 +1164,103 @@ body.no-nav .navbar {
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+.card-fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(10, 12, 20, 0.7);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
+}
+.app-card-wrap:hover .card-fav {
+  opacity: 1;
+}
+.card-fav.on {
+  opacity: 1;
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.55);
+  background: rgba(251, 191, 36, 0.12);
+}
+.card-fav:hover {
+  color: #fde68a;
+}
+
+.card-disguise {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(10, 12, 20, 0.7);
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+.app-card-wrap:hover .card-disguise {
+  opacity: 1;
+}
+.card-disguise:hover {
+  color: var(--accent);
+  background: rgba(109, 125, 246, 0.12);
+}
+
+.disguise-menu {
+  position: fixed;
+  z-index: 150;
+  min-width: 170px;
+  max-height: 300px;
+  overflow: auto;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-pop);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.disguise-menu-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 10px 4px;
+}
+.disguise-opt {
+  text-align: left;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.disguise-opt:hover {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+.disguise-opt.on {
+  color: var(--accent-2);
+  font-weight: 700;
 }
 
 .custom-card:hover .card-remove {

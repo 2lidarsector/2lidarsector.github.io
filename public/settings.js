@@ -12,6 +12,7 @@ window.ARX = window.ARX || {};
     panic: "google",
     panicKey: "`",
     camo: "off",
+    session: false,
     customCloakTitle: "",
     customCloakIcon: "",
   };
@@ -197,6 +198,7 @@ window.ARX = window.ARX || {};
   function panicTarget() { return load().panic; }
   function panicKey() { return load().panicKey || "`"; }
   function camoMode() { return load().camo || "off"; }
+  function sessionRestore() { return !!load().session; }
 
   function comboFromEvent(e) {
     if (
@@ -358,6 +360,7 @@ window.ARX = window.ARX || {};
     panicTarget: panicTarget,
     panicKey: panicKey,
     camoMode: camoMode,
+    sessionRestore: sessionRestore,
     comboFromEvent: comboFromEvent,
     formatKey: formatKey,
     aboutBlank: aboutBlank,
@@ -381,6 +384,7 @@ window.ARX = window.ARX || {};
   var themeText = document.getElementById("set-theme-text");
   var openModeSel = document.getElementById("set-open-mode");
   var camoSel = document.getElementById("set-camo");
+  var sessionSel = document.getElementById("set-session");
   var panicSel = document.getElementById("set-panic");
   var panicKeyInput = document.getElementById("set-panic-key");
   var configExportBtn = document.getElementById("btn-config-export");
@@ -455,6 +459,13 @@ window.ARX = window.ARX || {};
   if (camoSel) {
     camoSel.value = camoMode();
     camoSel.addEventListener("change", function () { set({ camo: camoSel.value }); });
+  }
+  if (sessionSel) {
+    sessionSel.checked = sessionRestore();
+    sessionSel.addEventListener("change", function () {
+      set({ session: sessionSel.checked });
+      if (sessionSel.checked && typeof window.trySaveSession === "function") window.trySaveSession();
+    });
   }
   if (panicSel) {
     panicSel.value = panicTarget();
@@ -546,6 +557,7 @@ window.ARX = window.ARX || {};
     if (themeSel) themeSel.value = themeName();
     if (openModeSel) openModeSel.value = openMode();
     if (camoSel) camoSel.value = camoMode();
+    if (sessionSel) sessionSel.checked = sessionRestore();
     if (panicSel) panicSel.value = panicTarget();
     if (panicKeyInput) panicKeyInput.value = formatKey(panicKey());
     syncTransportRow();
@@ -562,6 +574,7 @@ window.ARX = window.ARX || {};
     if (themeSel) themeSel.value = "midnight";
     if (openModeSel) openModeSel.value = "embed";
     if (camoSel) camoSel.value = "off";
+    if (sessionSel) sessionSel.checked = false;
     if (panicSel) panicSel.value = "google";
     if (panicKeyInput) panicKeyInput.value = formatKey("`");
     if (navEngine) navEngine.value = ENGINES.ddg;

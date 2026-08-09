@@ -59,6 +59,16 @@
       </div>
     </section>
 
+    <section class="library-section hidden" id="fav-section">
+      <div class="library-header">
+        <div>
+          <h2>Favorites</h2>
+          <p class="section-sub">Your starred apps, always on top.</p>
+        </div>
+      </div>
+      <div class="library-grid" id="fav-grid"></div>
+    </section>
+
     <section class="library-section hidden" id="recent-section">
       <div class="library-header">
         <div>
@@ -95,12 +105,16 @@
         <input type="text" id="browser-address-input" placeholder="Search the web or enter a URL..." autocomplete="off" spellcheck="false" />
       </form>
       <button class="browser-btn" id="btn-incognito" title="New incognito tab">&#128100;</button>
+      <button class="browser-btn" id="btn-save" title="Add current page to library">&#128190;</button>
       <button class="browser-btn btn-wide" id="btn-fullscreen" title="Enter fullscreen">&#9974; <span class="btn-label">Fullscreen</span></button>
+      <button class="browser-btn" id="btn-focus" title="Immersive focus mode">&#128065;</button>
       <button class="browser-btn btn-wide" id="btn-toggle-nav" title="Hide or show the top bar">&#9776; <span class="btn-label" id="btn-toggle-nav-label">Hide bar</span></button>
       <button class="browser-btn" id="btn-exit" title="Close all tabs">&#10005;</button>
     </div>
     <div id="frames"></div>
   </main>
+
+  <div id="focus-exit" class="hidden" title="Exit focus mode">&#10006; Exit</div>
 
   <div id="settings-modal" class="hidden">
     <div class="settings-panel">
@@ -194,6 +208,10 @@
           <option value="off">Off</option>
           <option value="docs">Fake Google Doc</option>
         </select>
+      </div>
+      <div class="settings-row">
+        <label for="set-session">Restore open tabs</label>
+        <input type="checkbox" id="set-session" />
       </div>
       <div class="settings-row">
         <label for="set-panic">Panic page</label>
