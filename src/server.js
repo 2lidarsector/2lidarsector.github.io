@@ -127,7 +127,7 @@ function recordFail(ip) {
 
 // ---------- admin key (for managing access keys) ----------
 
-const ADMIN_KEY = process.env.ARX_ADMIN_KEY || "";
+const ADMIN_KEY = (process.env.ARX_ADMIN_KEY || "").trim();
 
 function adminAuthed(req) {
   if (!ADMIN_KEY) return false;
