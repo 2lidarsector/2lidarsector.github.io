@@ -21,6 +21,12 @@
   --danger: #f87171;
   --nav-bg: rgba(11, 14, 20, 0.8);
   --nav-bg-2: rgba(17, 21, 30, 0.92);
+  --overlay: rgba(11, 14, 20, 0.75);
+  --hover: rgba(122, 134, 248, 0.08);
+  --hover-strong: rgba(122, 134, 248, 0.12);
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --row-border: rgba(148, 163, 184, 0.09);
+  --glow-top: rgba(122, 134, 248, 0.04);
   --scroll-thumb: #232a38;
   --scroll-thumb-hover: #313a4c;
   --radius-sm: 4px;
@@ -49,7 +55,7 @@ body {
   font-family: var(--font);
   color: var(--text);
   background:
-    linear-gradient(180deg, rgba(122, 134, 248, 0.03), transparent 240px),
+    linear-gradient(180deg, var(--glow-top), transparent 240px),
     var(--bg);
   min-height: 100vh;
   display: flex;
@@ -600,7 +606,7 @@ a {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: rgba(15, 18, 29, 0.9);
+  background: var(--nav-bg-2);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
@@ -613,7 +619,8 @@ a {
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--dim);
-  font-size: 14px;
+  font-size: 17px;
+  line-height: 1;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -622,7 +629,7 @@ a {
 .browser-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: rgba(109, 125, 246, 0.08);
+  background: var(--hover);
 }
 .browser-btn.btn-wide {
   width: auto;
@@ -652,7 +659,7 @@ body.focus-mode .tab-bar {
   padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(10, 12, 20, 0.7);
+  background: var(--overlay);
   color: var(--dim);
   font-size: 12.5px;
   font-weight: 700;
@@ -692,7 +699,7 @@ body.focus-mode .tab-bar {
   flex: 1;
   width: 100%;
   border: none;
-  background: #fff;
+  background: var(--bg);
   min-height: 0;
   display: none;
 }
@@ -734,7 +741,7 @@ body.focus-mode .tab-bar {
 .gear-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: rgba(109, 125, 246, 0.08);
+  background: var(--hover);
 }
 
 #settings-modal {
@@ -790,7 +797,7 @@ body.focus-mode .tab-bar {
   align-items: center;
   gap: 18px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.09);
+  border-bottom: 1px solid var(--row-border);
 }
 
 .settings-row label {
@@ -889,7 +896,7 @@ body.focus-mode .tab-bar {
 .settings-btn:hover {
   color: var(--text);
   border-color: var(--border-strong);
-  background: rgba(148, 163, 184, 0.08);
+  background: var(--hover);
 }
 
 .settings-btn.primary {
@@ -1025,7 +1032,7 @@ body.focus-mode .tab-bar {
   align-items: flex-end;
   gap: 6px;
   padding: 10px 16px 0;
-  background: rgba(15, 18, 29, 0.9);
+  background: var(--nav-bg-2);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   flex-shrink: 0;
@@ -1128,7 +1135,7 @@ body.focus-mode .tab-bar {
 
 .tab-fs:hover {
   color: var(--accent);
-  background: rgba(109, 125, 246, 0.12);
+  background: var(--hover-strong);
 }
 
 .tab-fs:disabled {
@@ -1139,7 +1146,7 @@ body.focus-mode .tab-bar {
 
 .tab-close:hover {
   color: var(--danger);
-  background: rgba(248, 113, 113, 0.14);
+  background: var(--danger-soft);
 }
 
 /* ================= Custom game cards ================= */
@@ -1157,7 +1164,7 @@ body.focus-mode .tab-bar {
   height: 26px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  background: rgba(10, 12, 20, 0.7);
+  background: var(--overlay);
   color: var(--dim);
   font-size: 13px;
   line-height: 1;
@@ -1175,9 +1182,9 @@ body.focus-mode .tab-bar {
   height: 26px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  background: rgba(10, 12, 20, 0.7);
+  background: var(--overlay);
   color: var(--muted);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
   opacity: 0;
@@ -1205,9 +1212,9 @@ body.focus-mode .tab-bar {
   height: 26px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  background: rgba(10, 12, 20, 0.7);
+  background: var(--overlay);
   color: var(--dim);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
   opacity: 0;
@@ -1218,7 +1225,7 @@ body.focus-mode .tab-bar {
 }
 .card-disguise:hover {
   color: var(--accent);
-  background: rgba(109, 125, 246, 0.12);
+  background: var(--hover-strong);
 }
 
 .disguise-menu {

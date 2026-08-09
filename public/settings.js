@@ -143,6 +143,12 @@ window.ARX = window.ARX || {};
       "--glow-2": rgba(accent2, 0.09),
       "--nav-bg": rgba(bg, 0.72),
       "--nav-bg-2": rgba(bg, 0.9),
+      "--overlay": rgba(bg, 0.75),
+      "--hover": rgba(accent, 0.08),
+      "--hover-strong": rgba(accent, 0.12),
+      "--danger-soft": rgba("#f87171", 0.14),
+      "--row-border": rgba(text, 0.09),
+      "--glow-top": rgba(accent, 0.04),
       "--scroll-thumb": rgba(text, 0.16),
       "--scroll-thumb-hover": rgba(text, 0.26),
     };
