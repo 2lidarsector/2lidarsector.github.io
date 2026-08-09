@@ -554,6 +554,7 @@ window.ARX = window.ARX || {};
   var resetBtn = document.getElementById("btn-settings-reset");
   var blankBtn = document.getElementById("btn-aboutblank");
   var blobTabBtn = document.getElementById("btn-blobtab");
+  var logoutBtn = document.getElementById("btn-logout");
   if (openBtn) openBtn.addEventListener("click", function () {
     modal.classList.remove("hidden");
     if (engineSel) engineSel.value = engineKey();
@@ -595,6 +596,13 @@ window.ARX = window.ARX || {};
   });
   if (blankBtn) blankBtn.addEventListener("click", aboutBlank);
   if (blobTabBtn) blobTabBtn.addEventListener("click", blobTab);
+  if (logoutBtn) logoutBtn.addEventListener("click", function () {
+    fetch("/api/logout", { method: "POST" })
+      .catch(function () {})
+      .finally(function () {
+        try { location.href = "/login.html"; } catch (e) {}
+      });
+  });
   if (modal) modal.addEventListener("click", function (e) {
     if (e.target === modal) modal.classList.add("hidden");
   });

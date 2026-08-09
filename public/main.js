@@ -1694,6 +1694,17 @@ renderRecent();
 
 renderLibrary();
 
+// ---- auth guard (backend only; ignored on static hosts) ----
+
+fetch("/api/auth", { cache: "no-store" })
+  .then((r) => r.json())
+  .then((d) => {
+    if (d && !d.authed) {
+      location.href = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
+    }
+  })
+  .catch(() => {});
+
 // ---- preload in-house games ----
 
 (function preloadGames() {
