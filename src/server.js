@@ -548,6 +548,11 @@ async function summarize() {
   for (const e of byKey.values()) {
     const lastSeen = e.sessions.length ? Math.max(...e.sessions.map((s) => s.lastSeen)) : 0;
     const st = settings[e.key] || { enabled: true, maxSessions: 0, maxDevices: 0 };
+    // Per-session detail: which device (fingerprint), IP, and browser used it.
+    const sessions = e.sessions
+      .slice()
+      .sort((a, b) => b.lastSeen - a.lastSeen)
+      .map((s) => ({ ip: s.ip, device: s.device, ua: s.ua, loginAt: s.loginAt, lastSeen: s.lastSeen }));
     keys.push({
       key: e.key,
       used: e.sessions.length > 0,
@@ -559,6 +564,7 @@ async function summarize() {
       lastSeen,
       sharing: e.sessions.length > 0 && e.devices.size > 1,
       settings: st,
+      sessions,
     });
   }
   return { active, keys };

@@ -136,6 +136,33 @@
   }
   .settings-editor button { padding: 6px 12px; font-size: 12.5px; }
   .settings-editor .btn-cancel-settings { color: #78808f; background: transparent; border-color: transparent; }
+  .details-panel {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(13, 16, 23, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .details-panel table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .details-panel th {
+    text-align: left;
+    color: #78808f;
+    font-weight: 600;
+    padding: 5px 10px 5px 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    white-space: nowrap;
+  }
+  .details-panel td {
+    padding: 5px 10px 5px 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    vertical-align: top;
+    word-break: break-all;
+  }
+  .details-panel tr:last-child td { border-bottom: 0; }
+  .details-panel td:nth-child(2) { font-family: "JetBrains Mono", Consolas, monospace; color: #a6adbb; }
+  .details-panel td:first-child { color: #e8eaf0; white-space: nowrap; }
   .empty { color: #78808f; font-size: 13px; padding: 8px 0; }
   .list .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.09); flex-wrap: wrap; }
   .list .item:last-child { border-bottom: 0; }
@@ -336,7 +363,12 @@
           var setBtn = document.createElement("button");
           setBtn.textContent = "Settings";
           setBtn.addEventListener("click", function () { toggleSettings(k.key, row, st); });
+          var detBtn = document.createElement("button");
+          detBtn.textContent = "Details";
+          detBtn.disabled = !k.used;
+          detBtn.addEventListener("click", function () { toggleDetails(k, row); });
           row.appendChild(kv);
+          row.appendChild(detBtn);
           row.appendChild(kickBtn);
           row.appendChild(setBtn);
           row.appendChild(delBtn);
@@ -397,6 +429,34 @@
       });
       editor.querySelector(".btn-cancel-settings").addEventListener("click", function () { editor.remove(); });
       row.appendChild(editor);
+    }
+
+    // Expand a key's live sessions: IP, device fingerprint, browser, last seen.
+    function toggleDetails(k, row) {
+      var existing = row.querySelector(".details-panel");
+      if (existing) { existing.remove(); return; }
+      var panel = document.createElement("div");
+      panel.className = "details-panel";
+      var s = (k.sessions || []).slice();
+      if (!s.length) {
+        panel.textContent = "No active sessions for this key.";
+      } else {
+        var table = document.createElement("table");
+        table.innerHTML =
+          "<thead><tr><th>IP</th><th>Device</th><th>Browser</th><th>Last seen</th></tr></thead><tbody>";
+        s.forEach(function (x) {
+          var tr = document.createElement("tr");
+          var ip = esc(x.ip || "-");
+          var dev = esc(x.device || "-");
+          var ua = esc(x.ua || "-");
+          if (ua.length > 60) ua = ua.slice(0, 60) + "…";
+          tr.innerHTML =
+            "<td>" + ip + "</td><td>" + dev + "</td><td title=\"" + esc(x.ua || "") + "\">" + ua + "</td><td>" + ago(x.lastSeen) + "</td>";
+          table.appendChild(tr);
+        });
+        panel.appendChild(table);
+      }
+      row.appendChild(panel);
     }
 
     function load() {
