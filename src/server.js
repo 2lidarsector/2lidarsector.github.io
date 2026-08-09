@@ -201,6 +201,24 @@ app.get("/api/auth", (req, res) => {
   res.json({ ok: true, authed: authed(req), v: APP_VERSION });
 });
 
+// CDN-proof auth handoff. bunny.net pull zones ignore query strings when
+// caching, so a `?auth=<token>` URL can still get served a stale cached copy
+// of "/". Putting the token in the PATH (/auth/<token>) makes each handoff a
+// unique URL that no CDN could have cached. We set the cookie here and bounce
+// to the clean destination.
+app.get("/auth/:token", (req, res) => {
+  const t = req.params.token || "";
+  const s = sessions.get(t);
+  if (!s || s.exp <= Date.now()) {
+    return res.redirect("/login.html");
+  }
+  s.lastSeen = Date.now();
+  res.setHeader("Set-Cookie", cookieFor(t));
+  let next = typeof req.query.next === "string" ? req.query.next : "";
+  if (!next.startsWith("/") || next.startsWith("//")) next = "/app.html";
+  res.redirect(next);
+});
+
 app.post("/api/login", async (req, res) => {
   const ip = clientIp(req);
   if (throttled(ip)) {

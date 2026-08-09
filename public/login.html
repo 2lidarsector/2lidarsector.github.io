@@ -101,12 +101,13 @@
     var next = params.get("next") || "/app.html";
 
     function go() {
-      // Some CDNs (bunny.net) drop Set-Cookie on POST. Carry the session token
-      // in the URL as a fallback so the next page load can set the cookie.
+      // CDN-proof handoff: bunny.net ignores query strings when caching, so a
+      // `?auth=` URL can get served a stale cached copy. The token goes in the
+      // PATH instead (/auth/<token>) so the URL is unique and never cached.
+      // That route sets the session cookie and redirects to `next`.
       var t = sessionStorage.getItem("arx_token") || "";
-      if (t && next.indexOf("auth=") === -1) {
-        var sep = next.indexOf("?") === -1 ? "?" : "&";
-        location.href = next + sep + "auth=" + encodeURIComponent(t);
+      if (t) {
+        location.href = "/auth/" + encodeURIComponent(t) + "?next=" + encodeURIComponent(next);
       } else {
         location.href = next;
       }

@@ -1,0 +1,5 @@
+Listening on:
+	http://localhost:8181
+	http://MSI:8181
+[auth] database: local keys
+[admin] key management API enabled
