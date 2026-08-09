@@ -554,8 +554,7 @@ window.ARX = window.ARX || {};
   var resetBtn = document.getElementById("btn-settings-reset");
   var blankBtn = document.getElementById("btn-aboutblank");
   var blobTabBtn = document.getElementById("btn-blobtab");
-  var logoutBtn = document.getElementById("btn-logout");
-  if (openBtn) openBtn.addEventListener("click", function () {
+  var logoutBtn = document.getElementById("btn-logout");  if (openBtn) openBtn.addEventListener("click", function () {
     modal.classList.remove("hidden");
     if (engineSel) engineSel.value = engineKey();
     if (homeSel) homeSel.value = homeUrl();
@@ -603,6 +602,168 @@ window.ARX = window.ARX || {};
         try { location.href = "/login.html"; } catch (e) {}
       });
   });
+
+  // ---------- admin: manage access keys ----------
+
+  var manageKeysBtn = document.getElementById("btn-manage-keys");
+  var keysModal = document.getElementById("keys-modal");
+  var keysAdminRow = document.getElementById("keys-admin-row");
+  var keysAdminInput = document.getElementById("keys-admin");
+  var keysListRow = document.getElementById("keys-list-row");
+  var keysList = document.getElementById("keys-list");
+  var keysAddRow = document.getElementById("keys-add-row");
+  var keysAddInput = document.getElementById("keys-add");
+  var keysAddBtn = document.getElementById("btn-keys-add");
+  var keysUnlockBtn = document.getElementById("btn-keys-unlock");
+  var keysLockBtn = document.getElementById("btn-keys-lock");
+  var keysCloseBtn = document.getElementById("btn-keys-close");
+  var keysStatus = document.getElementById("keys-status");
+  var storedAdminKey = "";
+  var keysCache = [];
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function keysUnlocked() { return !!storedAdminKey; }
+
+  function setKeysStatus(msg, isError) {
+    if (keysStatus) {
+      keysStatus.textContent = msg || "";
+      keysStatus.style.color = isError ? "var(--danger-soft)" : "";
+      keysStatus.style.color = isError ? "#f87171" : "var(--muted)";
+    }
+  }
+
+  function renderKeys() {
+    if (!keysList) return;
+    keysList.innerHTML = "";
+    if (!keysCache.length) {
+      keysList.textContent = "No keys yet.";
+      return;
+    }
+    keysCache.forEach(function (k) {
+      var row = document.createElement("div");
+      row.className = "key-list-item";
+      var span = document.createElement("span");
+      span.className = "key-list-value";
+      span.textContent = k.key_value;
+      span.title = "created " + (k.created_at || "?");
+      var del = document.createElement("button");
+      del.className = "key-list-del";
+      del.textContent = "Remove";
+      del.addEventListener("click", function () {
+        fetch("/api/admin/keys/" + encodeURIComponent(k.id), {
+          method: "DELETE",
+          headers: { "x-admin-key": storedAdminKey },
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) {
+              keysCache = keysCache.filter(function (x) { return x.id !== k.id; });
+              renderKeys();
+              setKeysStatus("Key removed.");
+            } else {
+              setKeysStatus(d.error || "Failed to remove key.", true);
+            }
+          })
+          .catch(function () { setKeysStatus("Network error.", true); });
+      });
+      row.appendChild(span);
+      row.appendChild(del);
+      keysList.appendChild(row);
+    });
+  }
+
+  function showKeysPanel() {
+    var unlocked = keysUnlocked();
+    if (keysAdminRow) keysAdminRow.classList.toggle("hidden", unlocked);
+    if (keysListRow) keysListRow.classList.toggle("hidden", !unlocked);
+    if (keysAddRow) keysAddRow.classList.toggle("hidden", !unlocked);
+    if (keysUnlockBtn) keysUnlockBtn.classList.toggle("hidden", unlocked);
+    if (keysLockBtn) keysLockBtn.classList.toggle("hidden", !unlocked);
+    if (unlocked) renderKeys();
+  }
+
+  function loadKeys() {
+    if (!keysUnlocked()) {
+      setKeysStatus("Enter the admin key first.", true);
+      return;
+    }
+    fetch("/api/admin/keys", { headers: { "x-admin-key": storedAdminKey } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) {
+          keysCache = d.keys || [];
+          renderKeys();
+          setKeysStatus(keysCache.length + " key(s).");
+        } else {
+          storedAdminKey = "";
+          setKeysStatus(d.error || "Invalid admin key.", true);
+          showKeysPanel();
+        }
+      })
+      .catch(function () { setKeysStatus("Network error.", true); });
+  }
+
+  if (manageKeysBtn) manageKeysBtn.addEventListener("click", function () {
+    keysModal.classList.remove("hidden");
+    storedAdminKey = "";
+    keysCache = [];
+    showKeysPanel();
+    setKeysStatus("");
+  });
+  if (keysUnlockBtn) keysUnlockBtn.addEventListener("click", function () {
+    storedAdminKey = (keysAdminInput ? keysAdminInput.value : "").trim();
+    if (!storedAdminKey) {
+      setKeysStatus("Enter the admin key.", true);
+      return;
+    }
+    loadKeys();
+  });
+  if (keysLockBtn) keysLockBtn.addEventListener("click", function () {
+    storedAdminKey = "";
+    keysCache = [];
+    if (keysAdminInput) keysAdminInput.value = "";
+    showKeysPanel();
+    setKeysStatus("");
+  });
+  if (keysCloseBtn) keysCloseBtn.addEventListener("click", function () { keysModal.classList.add("hidden"); });
+  if (keysAddBtn) keysAddBtn.addEventListener("click", function () {
+    var key = (keysAddInput ? keysAddInput.value : "").trim();
+    if (!key) {
+      setKeysStatus("Enter a key to add.", true);
+      return;
+    }
+    fetch("/api/admin/keys", {
+      method: "POST",
+      headers: { "x-admin-key": storedAdminKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ key: key }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) {
+          if (keysAddInput) keysAddInput.value = "";
+          loadKeys();
+          setKeysStatus("Key added.");
+        } else {
+          setKeysStatus(d.error || "Failed to add key.", true);
+        }
+      })
+      .catch(function () { setKeysStatus("Network error.", true); });
+  });
+  if (keysAdminInput) keysAdminInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && keysUnlockBtn) keysUnlockBtn.click();
+  });
+  if (keysAddInput) keysAddInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && keysAddBtn) keysAddBtn.click();
+  });
+  if (keysModal) keysModal.addEventListener("click", function (e) {
+    if (e.target === keysModal) keysModal.classList.add("hidden");
+  });
+
   if (modal) modal.addEventListener("click", function (e) {
     if (e.target === modal) modal.classList.add("hidden");
   });

@@ -7,6 +7,7 @@ import express from "express";
 import { createBareServer } from "@tomphttp/bare-server-node";
 import { server as wisp } from "@mercuryworkshop/wisp-js/server";
 import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
+import * as store from "./db.js";
 
 const publicPath = join(process.cwd(), "public");
 const keysPath = join(process.cwd(), "keys.txt");
@@ -16,7 +17,11 @@ const COOKIE_NAME = "arx_session";
 
 // ---------- access keys (never shipped to the browser) ----------
 
-function loadKeys() {
+// Local-only fallback list (used when there's no Wasmer DB configured).
+let localKeys = null; // null = not loaded yet
+
+function loadLocalKeys() {
+  if (localKeys !== null) return localKeys;
   let keys = [];
   if (process.env.ARX_KEYS) {
     keys = process.env.ARX_KEYS.split(",").map((s) => s.trim()).filter(Boolean);
@@ -36,23 +41,32 @@ function loadKeys() {
     keys = [generated];
     try {
       writeFileSync(keysPath, generated + "\n");
-      console.log(`[auth] No keys configured. Generated an access key and saved it to ${keysPath}`);
+      console.log(`[auth] Generated a local access key and saved it to ${keysPath}`);
     } catch (e) {
-      console.log(`[auth] No keys configured. Generated access key (save this): ${generated}`);
+      console.log(`[auth] Generated access key (save this): ${generated}`);
     }
   }
-  return keys;
+  localKeys = keys;
+  return localKeys;
 }
 
-const KEYS = loadKeys();
-
-function validKey(input) {
+async function validKey(input) {
   if (typeof input !== "string" || !input.length) return false;
-  const a = Buffer.from(input);
-  return KEYS.some((k) => {
-    const b = Buffer.from(k);
-    return a.length === b.length && timingSafeEqual(a, b);
-  });
+  if (store.dbConfigured()) {
+    try {
+      return await store.keyExists(input);
+    } catch (e) {
+      console.error("[auth] DB lookup failed, falling back to local keys", e);
+      return loadLocalKeys().some((k) => safeEqual(k, input));
+    }
+  }
+  return loadLocalKeys().some((k) => safeEqual(k, input));
+}
+
+function safeEqual(a, b) {
+  const x = Buffer.from(String(a));
+  const y = Buffer.from(String(b));
+  return x.length === y.length && timingSafeEqual(x, y);
 }
 
 // ---------- sessions ----------
@@ -111,6 +125,22 @@ function recordFail(ip) {
   loginThrottle.set(ip, t);
 }
 
+// ---------- admin key (for managing access keys) ----------
+
+const ADMIN_KEY = process.env.ARX_ADMIN_KEY || "";
+
+function adminAuthed(req) {
+  if (!ADMIN_KEY) return false;
+  const provided = (req.headers["x-admin-key"] || "").trim();
+  return provided.length > 0 && safeEqual(ADMIN_KEY, provided);
+}
+
+function requireAdmin(req, res, next) {
+  if (!ADMIN_KEY) return res.status(404).json({ error: "admin api disabled" });
+  if (!adminAuthed(req)) return res.status(403).json({ error: "invalid admin key" });
+  next();
+}
+
 // ---------- app ----------
 
 const app = express();
@@ -125,14 +155,14 @@ app.get("/api/auth", (req, res) => {
   res.json({ ok: true, authed: authed(req) });
 });
 
-app.post("/api/login", (req, res) => {
+app.post("/api/login", async (req, res) => {
   const ip = req.ip || "unknown";
   if (throttled(ip)) {
     res.status(429).json({ ok: false, error: "Too many attempts. Wait a minute." });
     return;
   }
   const key = req.body && typeof req.body.key === "string" ? req.body.key : "";
-  if (validKey(key)) {
+  if (await validKey(key)) {
     const token = randomBytes(32).toString("hex");
     sessions.set(token, Date.now() + SESSION_TTL_MS);
     res.setHeader("Set-Cookie", cookieFor(token));
@@ -148,6 +178,65 @@ app.post("/api/logout", (req, res) => {
   if (token) sessions.delete(token);
   res.setHeader("Set-Cookie", clearCookie());
   res.json({ ok: true });
+});
+
+// Admin API: list / add / remove access keys in the database.
+app.get("/api/admin/keys", requireAdmin, async (req, res) => {
+  try {
+    if (store.dbConfigured()) {
+      const rows = await store.listKeys();
+      res.json({ ok: true, keys: rows });
+    } else {
+      loadLocalKeys();
+      res.json({ ok: true, keys: localKeys.map((key_value, i) => ({ id: i + 1, key_value })) });
+    }
+  } catch (e) {
+    console.error("[admin] list keys failed", e);
+    res.status(500).json({ error: "database error" });
+  }
+});
+
+app.post("/api/admin/keys", requireAdmin, async (req, res) => {
+  const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
+  if (key.length < 4 || key.length > 255) {
+    res.status(400).json({ error: "Key must be between 4 and 255 characters" });
+    return;
+  }
+  try {
+    if (store.dbConfigured()) {
+      await store.addKey(key);
+    } else {
+      loadLocalKeys();
+      if (localKeys.some((k) => safeEqual(k, key))) {
+        return res.status(409).json({ error: "Key already exists" });
+      }
+      localKeys.push(key);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    if (e && e.code === "ER_DUP_ENTRY") {
+      res.status(409).json({ error: "Key already exists" });
+      return;
+    }
+    console.error("[admin] add key failed", e);
+    res.status(500).json({ error: "database error" });
+  }
+});
+
+app.delete("/api/admin/keys/:id", requireAdmin, async (req, res) => {
+  try {
+    if (store.dbConfigured()) {
+      await store.removeKey(req.params.id);
+    } else {
+      loadLocalKeys();
+      const idx = Number(req.params.id) - 1;
+      if (idx >= 0 && idx < localKeys.length) localKeys.splice(idx, 1);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("[admin] remove key failed", e);
+    res.status(500).json({ error: "database error" });
+  }
 });
 
 // Gate everything else (static files, health check, everything) behind a session.
@@ -222,7 +311,30 @@ server.on("listening", () => {
   console.log("Listening on:");
   console.log(`\thttp://localhost:${address.port}`);
   console.log(`\thttp://${hostname()}:${address.port}`);
+  console.log(`[auth] database: ${store.dbConfigured() ? "MySQL (" + process.env.DB_HOST + ")" : "local keys"}`);
+  if (ADMIN_KEY) console.log("[admin] key management API enabled");
+  else console.log("[admin] key management API disabled (set ARX_ADMIN_KEY)");
 });
+
+// Init database table + seed local keys into it on startup.
+(async () => {
+  loadLocalKeys();
+  if (store.dbConfigured()) {
+    try {
+      await store.ensureTable();
+      if (localKeys.length && (await store.countKeys()) === 0) {
+        for (const k of localKeys) {
+          try {
+            await store.addKey(k);
+          } catch (e) {}
+        }
+        console.log(`[auth] seeded ${localKeys.length} local key(s) into the database`);
+      }
+    } catch (e) {
+      console.error("[auth] database init failed (keys will not come from the DB)", e);
+    }
+  }
+})();
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
