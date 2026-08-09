@@ -163,10 +163,12 @@ function requireAdmin(req, res, next) {
 const app = express();
 app.use(express.json());
 
-// CDN safety: anything auth/session/API-related must never be cached
-// (bunny.net, Cloudflare, etc. otherwise serve stale "not signed in" copies).
+// CDN safety: anything auth/session/API/HTML-related must never be cached
+// (bunny.net, Cloudflare, etc. otherwise serve stale "not signed in" copies
+// or cached redirects, breaking sign-in). Only real static assets may cache.
 const NO_STORE = "no-store, no-cache, must-revalidate, max-age=0";
 const PRIVATE = "private, no-store, no-cache, must-revalidate, max-age=0";
+const STATIC_EXT = /\.(js|mjs|css|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|otf|eot|mp3|ogg|wasm|json|txt|fnt|data|mp4|webm)$/i;
 app.use((req, res, next) => {
   const p = req.path;
   if (
@@ -178,12 +180,12 @@ app.use((req, res, next) => {
   ) {
     res.setHeader("Cache-Control", NO_STORE);
     res.setHeader("Pragma", "no-cache");
-  } else if (p === "/login.html" || p === "/app.html" || p === "/admin.html") {
+  } else if (!STATIC_EXT.test(p) || req.headers.cookie) {
+    // HTML pages, redirects, "/" and anything carrying a session cookie
+    // must be revalidated every time so CDNs never serve stale auth state.
     res.setHeader("Cache-Control", PRIVATE);
     res.setHeader("Pragma", "no-cache");
-  } else if (req.headers.cookie) {
-    // Requests carrying a session cookie must not be served from CDN cache.
-    res.setHeader("Cache-Control", PRIVATE);
+    res.setHeader("Vary", "Cookie");
   }
   next();
 });
