@@ -163,6 +163,31 @@ function requireAdmin(req, res, next) {
 const app = express();
 app.use(express.json());
 
+// CDN safety: anything auth/session/API-related must never be cached
+// (bunny.net, Cloudflare, etc. otherwise serve stale "not signed in" copies).
+const NO_STORE = "no-store, no-cache, must-revalidate, max-age=0";
+const PRIVATE = "private, no-store, no-cache, must-revalidate, max-age=0";
+app.use((req, res, next) => {
+  const p = req.path;
+  if (
+    p.startsWith("/api/") ||
+    p.startsWith("/remote/") ||
+    p.startsWith("/stream/") ||
+    p.startsWith("/net/") ||
+    p.startsWith("/__status__")
+  ) {
+    res.setHeader("Cache-Control", NO_STORE);
+    res.setHeader("Pragma", "no-cache");
+  } else if (p === "/login.html" || p === "/app.html" || p === "/admin.html") {
+    res.setHeader("Cache-Control", PRIVATE);
+    res.setHeader("Pragma", "no-cache");
+  } else if (req.headers.cookie) {
+    // Requests carrying a session cookie must not be served from CDN cache.
+    res.setHeader("Cache-Control", PRIVATE);
+  }
+  next();
+});
+
 // Public: auth API + login page (self-contained, no external assets).
 app.get("/login.html", (req, res) => {
   res.sendFile(join(publicPath, "login.html"));
