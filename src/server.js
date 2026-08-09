@@ -9,7 +9,20 @@ import { server as wisp } from "@mercuryworkshop/wisp-js/server";
 import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
 import * as store from "./db.js";
 
-const APP_VERSION = "027c6b6";
+// Report the real deployed build: git commit hash if present, else a fallback.
+let APP_VERSION = process.env.ARX_VERSION || "";
+if (!APP_VERSION) {
+  try {
+    if (existsSync(join(".git", "HEAD"))) {
+      const ref = readFileSync(join(".git", "HEAD"), "utf8").trim().split(" ")[1];
+      if (ref) {
+        const head = readFileSync(join(".git", ref), "utf8").trim();
+        if (/^[0-9a-f]{40}$/.test(head)) APP_VERSION = head.slice(0, 7);
+      }
+    }
+  } catch (e) {}
+}
+if (!APP_VERSION) APP_VERSION = "unknown";
 
 const publicPath = join(process.cwd(), "public");
 const keysPath = join(process.cwd(), "keys.txt");
