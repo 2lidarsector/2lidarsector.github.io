@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { hostname } from "node:os";
 import { createServer } from "node:http";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual, createHmac } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import express from "express";
 import { createBareServer } from "@tomphttp/bare-server-node";
@@ -86,9 +86,48 @@ function safeEqual(a, b) {
 
 // ---------- sessions ----------
 
-// token -> { exp, key, ip, device, ua, loginAt, lastSeen }
+// Sessions are STATELESS: the cookie value is a signed token (payload.hmac).
+// This is essential on Wasmer Edge, which serves each app from multiple
+// instances with no shared memory — a request landing on a different instance
+// must still be able to validate the session. Each instance also keeps an
+// in-memory map purely for the admin dashboard's live tracking (best-effort).
+const SESSION_SECRET =
+  process.env.ARX_SESSION_SECRET || process.env.ARX_ADMIN_KEY || "dev-insecure-session-secret";
+
+// token -> { exp, key, ip, device, ua, loginAt, lastSeen } (tracking only)
 const sessions = new Map();
 const recentLogins = []; // { key, ip, device, ua, at } newest first, capped
+
+function sign(data) {
+  return createHmac("sha256", SESSION_SECRET).update(data).digest("base64url");
+}
+
+function makeToken(payload) {
+  const body = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  return body + "." + sign(body);
+}
+
+// Returns the payload { exp, key, ... } if the token is valid, else null.
+// Pure crypto — no shared memory required — so any instance (or a restarted
+// one) can authenticate a cookie issued by another instance.
+function parseToken(token) {
+  if (typeof token !== "string" || !token.length) return null;
+  const i = token.lastIndexOf(".");
+  if (i <= 0 || i === token.length - 1) return null;
+  const body = token.slice(0, i);
+  const sig = token.slice(i + 1);
+  const expected = sign(body);
+  const a = Buffer.from(expected);
+  const b = Buffer.from(sig);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+    if (!payload || typeof payload.exp !== "number" || payload.exp <= Date.now()) return null;
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
 
 function cookieFor(token) {
   return `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
@@ -109,16 +148,27 @@ function readToken(req) {
   return null;
 }
 
+// Adds a valid session to the local tracking map (best-effort, for admin).
+function track(token, payload) {
+  sessions.set(token, {
+    exp: payload.exp,
+    key: payload.key,
+    ip: payload.ip,
+    device: payload.device,
+    ua: payload.ua,
+    loginAt: payload.loginAt,
+    lastSeen: Date.now(),
+  });
+}
+
 function authed(req) {
   const token = readToken(req);
   if (!token) return false;
+  const payload = parseToken(token);
+  if (!payload) return false;
   const s = sessions.get(token);
-  if (!s) return false;
-  if (Date.now() > s.exp) {
-    sessions.delete(token);
-    return false;
-  }
-  s.lastSeen = Date.now();
+  if (!s) track(token, payload);
+  else s.lastSeen = Date.now();
   return true;
 }
 
@@ -225,11 +275,11 @@ app.get("/api/auth", (req, res) => {
 // to the clean destination with the session cookie now in place.
 app.get("/auth/:token", (req, res) => {
   const t = req.params.token || "";
-  const s = sessions.get(t);
-  if (!s || s.exp <= Date.now()) {
+  const payload = parseToken(t);
+  if (!payload) {
     return res.redirect("/login.html");
   }
-  s.lastSeen = Date.now();
+  track(t, payload);
   res.setHeader("Set-Cookie", cookieFor(t));
   let next = typeof req.query.next === "string" ? req.query.next : "";
   if (!next.startsWith("/") || next.startsWith("//")) next = "/app.html";
@@ -250,10 +300,11 @@ app.post("/api/login", async (req, res) => {
   }
   const key = req.body && typeof req.body.key === "string" ? req.body.key : "";
   if (await validKey(key)) {
-    const token = randomBytes(32).toString("hex");
     const device = typeof req.body.device === "string" ? req.body.device.slice(0, 64) : "";
     const ua = (req.headers["user-agent"] || "").slice(0, 200);
-    sessions.set(token, { exp: Date.now() + SESSION_TTL_MS, key, ip, device, ua, loginAt: Date.now(), lastSeen: Date.now() });
+    const payload = { exp: Date.now() + SESSION_TTL_MS, key, ip, device, ua, loginAt: Date.now() };
+    const token = makeToken(payload);
+    track(token, payload);
     recordLogin(key, ip, device, ua);
     res.setHeader("Set-Cookie", cookieFor(token));
     res.json({ ok: true, token });
@@ -456,9 +507,8 @@ app.use((req, res, next) => {
   // set the cookie normally and bounce to the clean URL.
   const t = req.query && req.query.auth;
   if (typeof t === "string" && t.length) {
-    const s = sessions.get(t);
-    if (s && s.exp > Date.now()) {
-      s.lastSeen = Date.now();
+    const payload = parseToken(t);
+    if (payload) {
       res.setHeader("Set-Cookie", cookieFor(t));
       return res.redirect(req.path || "/app.html");
     }
