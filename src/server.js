@@ -84,6 +84,76 @@ function safeEqual(a, b) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
+// ---------- per-key settings (enabled / max sessions / max devices) ----------
+
+// Backed by the DB when configured (key_settings table), else a JSON file so
+// the settings survive restarts even with in-memory keys.
+const keySettingsPath = join(process.cwd(), "key-settings.json");
+
+function loadKeySettingsFile() {
+  try {
+    if (existsSync(keySettingsPath)) {
+      const raw = JSON.parse(readFileSync(keySettingsPath, "utf8"));
+      return raw && typeof raw === "object" ? raw : {};
+    }
+  } catch (e) {}
+  return {};
+}
+
+function saveKeySettingsFile(obj) {
+  try {
+    writeFileSync(keySettingsPath, JSON.stringify(obj, null, 2));
+  } catch (e) {}
+}
+
+async function getKeySettings(key) {
+  if (store.dbConfigured()) {
+    try {
+      return await store.getKeySettings(key);
+    } catch (e) {
+      console.error("[auth] DB settings lookup failed, using local", e);
+    }
+  }
+  const all = loadKeySettingsFile();
+  const s = all[key];
+  return {
+    enabled: s ? s.enabled !== false : true,
+    maxSessions: (s && s.maxSessions) || 0,
+    maxDevices: (s && s.maxDevices) || 0,
+  };
+}
+
+async function setKeySettings(key, s) {
+  const next = { enabled: s.enabled !== false, maxSessions: Math.max(0, s.maxSessions | 0), maxDevices: Math.max(0, s.maxDevices | 0) };
+  if (store.dbConfigured()) {
+    try {
+      await store.setKeySettings(key, next);
+      return;
+    } catch (e) {
+      console.error("[auth] DB settings write failed, using local", e);
+    }
+  }
+  const all = loadKeySettingsFile();
+  all[key] = next;
+  saveKeySettingsFile(all);
+}
+
+async function allKeySettings() {
+  if (store.dbConfigured()) {
+    try {
+      return await store.listKeySettings();
+    } catch (e) {
+      console.error("[auth] DB settings list failed, using local", e);
+    }
+  }
+  const all = loadKeySettingsFile();
+  const out = {};
+  for (const [k, s] of Object.entries(all)) {
+    out[k] = { enabled: s.enabled !== false, maxSessions: s.maxSessions || 0, maxDevices: s.maxDevices || 0 };
+  }
+  return out;
+}
+
 // ---------- sessions ----------
 
 // Sessions are STATELESS: the cookie value is a signed token (payload.hmac).
@@ -304,6 +374,34 @@ app.post("/api/login", async (req, res) => {
   if (await validKey(key)) {
     const device = typeof req.body.device === "string" ? req.body.device.slice(0, 64) : "";
     const ua = (req.headers["user-agent"] || "").slice(0, 200);
+
+    const settings = await getKeySettings(key);
+    if (!settings.enabled) {
+      res.status(403).json({ ok: false, error: "This key is disabled." });
+      return;
+    }
+    if (settings.maxSessions > 0 || settings.maxDevices > 0) {
+      const now = Date.now();
+      const active = [...sessions.values()].filter((s) => s.key === key && s.exp > now);
+      if (settings.maxSessions > 0 && active.length >= settings.maxSessions) {
+        res.status(403).json({
+          ok: false,
+          error: `Max ${settings.maxSessions} concurrent session(s) reached for this key.`,
+        });
+        return;
+      }
+      if (settings.maxDevices > 0 && device) {
+        const devices = new Set(active.filter((s) => s.device).map((s) => s.device));
+        if (!devices.has(device) && devices.size >= settings.maxDevices) {
+          res.status(403).json({
+            ok: false,
+            error: `Max ${settings.maxDevices} device(s) allowed for this key.`,
+          });
+          return;
+        }
+      }
+    }
+
     const payload = { exp: Date.now() + SESSION_TTL_MS, key, ip, device, ua, loginAt: Date.now() };
     const token = makeToken(payload);
     track(token, payload);
@@ -395,6 +493,11 @@ app.post("/api/admin/keys/remove", requireAdmin, async (req, res) => {
     } else {
       loadLocalKeys();
       localKeys = localKeys.filter((k) => !safeEqual(k, key));
+      const all = loadKeySettingsFile();
+      if (key in all) {
+        delete all[key];
+        saveKeySettingsFile(all);
+      }
     }
     res.json({ ok: true });
   } catch (e) {
@@ -428,6 +531,7 @@ async function allKnownKeys() {
 async function summarize() {
   const active = activeSessions();
   const known = await allKnownKeys();
+  const settings = await allKeySettings();
   const byKey = new Map();
   for (const k of known) {
     byKey.set(k, { key: k, sessions: [], devices: new Set(), ips: new Set(), uas: new Set() });
@@ -443,6 +547,7 @@ async function summarize() {
   const keys = [];
   for (const e of byKey.values()) {
     const lastSeen = e.sessions.length ? Math.max(...e.sessions.map((s) => s.lastSeen)) : 0;
+    const st = settings[e.key] || { enabled: true, maxSessions: 0, maxDevices: 0 };
     keys.push({
       key: e.key,
       used: e.sessions.length > 0,
@@ -453,6 +558,7 @@ async function summarize() {
       ips: [...e.ips],
       lastSeen,
       sharing: e.sessions.length > 0 && e.devices.size > 1,
+      settings: st,
     });
   }
   return { active, keys };
@@ -499,6 +605,28 @@ app.post("/api/admin/kick", requireAdmin, async (req, res) => {
     }
   }
   res.json({ ok: true, removed });
+});
+
+// Update per-key settings (enabled, max sessions, max devices).
+app.post("/api/admin/keys/settings", requireAdmin, async (req, res) => {
+  const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
+  if (!key) {
+    res.status(400).json({ error: "Missing key" });
+    return;
+  }
+  const body = req.body || {};
+  await setKeySettings(key, {
+    enabled: body.enabled === undefined ? true : !!body.enabled,
+    maxSessions: Number(body.maxSessions) || 0,
+    maxDevices: Number(body.maxDevices) || 0,
+  });
+  // Disabling a key also kicks its live sessions so it takes effect immediately.
+  if (body.enabled === false) {
+    for (const [token, s] of sessions) {
+      if (s.key === key) sessions.delete(token);
+    }
+  }
+  res.json({ ok: true });
 });
 
 // Gate everything else (static files, health check, everything) behind a session.

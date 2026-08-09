@@ -109,6 +109,33 @@
     outline: none;
   }
   .addbar input:focus { border-color: #7a86f8; }
+  .settings-editor {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 10px 12px;
+    margin-top: 8px;
+    background: rgba(13, 16, 23, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: #a6adbb;
+  }
+  .settings-editor label { display: flex; align-items: center; gap: 6px; }
+  .settings-editor input[type="number"] {
+    width: 70px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: #0d1017;
+    color: #e8eaf0;
+    font-size: 13px;
+    outline: none;
+  }
+  .settings-editor button { padding: 6px 12px; font-size: 12.5px; }
+  .settings-editor .btn-cancel-settings { color: #78808f; background: transparent; border-color: transparent; }
   .empty { color: #78808f; font-size: 13px; padding: 8px 0; }
   .list .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.09); flex-wrap: wrap; }
   .list .item:last-child { border-bottom: 0; }
@@ -279,12 +306,14 @@
         keysList.appendChild(e);
       } else {
         d.keys.forEach(function (k) {
+          var st = k.settings || { enabled: true, maxSessions: 0, maxDevices: 0 };
           var row = document.createElement("div");
           row.className = "row";
           var kv = document.createElement("div");
           kv.className = "kv";
           var shareBadge = k.sharing ? '<span class="badge share">SHARED</span> ' : '<span class="badge ok">OK</span> ';
           var usedBadge = k.used ? "" : '<span class="badge ips">UNUSED</span> ';
+          var disabledBadge = st.enabled ? "" : '<span class="badge share">DISABLED</span> ';
           var sub = "";
           if (k.used) {
             sub = " " + k.sessionCount + " session(s) &middot; " + k.deviceCount + " device(s)";
@@ -293,7 +322,9 @@
           } else {
             sub = " never used";
           }
-          kv.innerHTML = "<b>" + esc(k.key) + "</b><br><div class='sub'>" + usedBadge + shareBadge + sub + "</div>";
+          if (st.maxSessions > 0) sub += " &middot; max " + st.maxSessions + " session(s)";
+          if (st.maxDevices > 0) sub += " &middot; max " + st.maxDevices + " device(s)";
+          kv.innerHTML = "<b>" + esc(k.key) + "</b><br><div class='sub'>" + usedBadge + shareBadge + disabledBadge + sub + "</div>";
           var kickBtn = document.createElement("button");
           kickBtn.className = "danger";
           kickBtn.textContent = "Kick";
@@ -302,8 +333,12 @@
           var delBtn = document.createElement("button");
           delBtn.textContent = "Remove";
           delBtn.addEventListener("click", function () { removeKey(k.key); });
+          var setBtn = document.createElement("button");
+          setBtn.textContent = "Settings";
+          setBtn.addEventListener("click", function () { toggleSettings(k.key, row, st); });
           row.appendChild(kv);
           row.appendChild(kickBtn);
+          row.appendChild(setBtn);
           row.appendChild(delBtn);
           keysList.appendChild(row);
         });
@@ -332,6 +367,36 @@
           loginsList.appendChild(row);
         });
       }
+    }
+
+    // Inline per-key settings editor (enabled, max sessions, max devices).
+    function toggleSettings(key, row, st) {
+      var existing = row.querySelector(".settings-editor");
+      if (existing) { existing.remove(); return; }
+      var editor = document.createElement("div");
+      editor.className = "settings-editor";
+      editor.innerHTML =
+        '<label><input type="checkbox" class="set-enabled" ' + (st.enabled ? "checked" : "") + '> Enabled</label>' +
+        '<label>Max sessions <input type="number" class="set-sessions" min="0" value="' + (st.maxSessions || 0) + '"> (0 = unlimited)</label>' +
+        '<label>Max devices <input type="number" class="set-devices" min="0" value="' + (st.maxDevices || 0) + '"> (0 = unlimited)</label>' +
+        '<button class="primary btn-save-settings">Save</button>' +
+        '<button class="btn-cancel-settings">Close</button>';
+      editor.querySelector(".btn-save-settings").addEventListener("click", function () {
+        var enabled = editor.querySelector(".set-enabled").checked;
+        var maxSessions = Math.max(0, parseInt(editor.querySelector(".set-sessions").value, 10) || 0);
+        var maxDevices = Math.max(0, parseInt(editor.querySelector(".set-devices").value, 10) || 0);
+        api("/api/admin/keys/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: key, enabled: enabled, maxSessions: maxSessions, maxDevices: maxDevices }),
+        }).then(function (res) {
+          setStatus(res.d && res.d.ok ? "Settings saved for " + key + "." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
+          editor.remove();
+          load();
+        });
+      });
+      editor.querySelector(".btn-cancel-settings").addEventListener("click", function () { editor.remove(); });
+      row.appendChild(editor);
     }
 
     function load() {

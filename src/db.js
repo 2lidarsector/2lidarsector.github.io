@@ -38,6 +38,16 @@ export async function ensureTable() {
        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
      ) ENGINE=InnoDB`
   );
+  await p.query(
+    `CREATE TABLE IF NOT EXISTS key_settings (
+       key_value VARCHAR(255) NOT NULL UNIQUE,
+       enabled TINYINT(1) NOT NULL DEFAULT 1,
+       max_sessions INT NOT NULL DEFAULT 0,
+       max_devices INT NOT NULL DEFAULT 0,
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       CONSTRAINT fk_key_settings_key FOREIGN KEY (key_value) REFERENCES access_keys(key_value) ON DELETE CASCADE
+     ) ENGINE=InnoDB`
+  );
 }
 
 export async function listKeys() {
@@ -78,4 +88,40 @@ export async function countKeys() {
   const p = await getPool();
   const [rows] = await p.query("SELECT COUNT(*) AS c FROM access_keys");
   return rows[0] ? rows[0].c : 0;
+}
+
+// Per-key settings: enabled, max concurrent sessions, max distinct devices.
+// 0 for max_sessions/max_devices means unlimited.
+export async function getKeySettings(key) {
+  const p = await getPool();
+  const [rows] = await p.query(
+    "SELECT enabled, max_sessions, max_devices FROM key_settings WHERE key_value = ?",
+    [key]
+  );
+  if (!rows.length) return { enabled: true, maxSessions: 0, maxDevices: 0 };
+  return {
+    enabled: !!rows[0].enabled,
+    maxSessions: rows[0].max_sessions || 0,
+    maxDevices: rows[0].max_devices || 0,
+  };
+}
+
+export async function setKeySettings(key, s) {
+  const p = await getPool();
+  await p.query(
+    `INSERT INTO key_settings (key_value, enabled, max_sessions, max_devices)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), max_sessions = VALUES(max_sessions), max_devices = VALUES(max_devices)`,
+    [key, s.enabled ? 1 : 0, s.maxSessions || 0, s.maxDevices || 0]
+  );
+}
+
+export async function listKeySettings() {
+  const p = await getPool();
+  const [rows] = await p.query(
+    "SELECT key_value, enabled, max_sessions, max_devices FROM key_settings"
+  );
+  const out = {};
+  for (const r of rows) out[r.key_value] = { enabled: !!r.enabled, maxSessions: r.max_sessions || 0, maxDevices: r.max_devices || 0 };
+  return out;
 }

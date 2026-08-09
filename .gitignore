@@ -1,6 +1,7 @@
 node_modules/
 
 keys.txt
+key-settings.json
 
 
 out.log
