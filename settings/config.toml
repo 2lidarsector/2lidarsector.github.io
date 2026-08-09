@@ -1,0 +1,44 @@
+# ### Address & Root dir
+# This is where the server will bind to.
+# In the wasmer runtime, this will not be accessible from the
+# outside; the runtime will handle that.
+# Note: In the wasmer runtime, the host is not accessible from the
+# outside; the runtime will handle that. It should be set to "::" (all
+# interfaces) to work in the wasmer runtime.
+host = "::"
+
+# The port is where the server will listen to. In the wasmer runtime, this is
+# not accessible from the outside, but the runtime will handle that. However,
+# you should still set it to 8080 to work in the wasmer runtime.
+port = 8080
+
+# The root directory that will be used to serve the static files.
+# In the wasmer runtime, this is a path relative to the root of the package.
+root = "/public"
+
+# ### Logging
+# Possible values: "info", "error", "debug"
+log-level = "error"
+
+# ### Cache Control headers
+# Enable to cache static files.
+cache-control-headers = true
+
+# ### Auto Compression
+# Auto compress static files.
+compression = true
+
+# ### Error pages
+# Set the error page for 404 errors. It should be relative to the root directory.
+page404 = "./404.html"
+
+# ### Directory listing
+# Enable directory listing for non-index directories.
+directory-listing = false
+
+# ### Redirect to trailing slash in the requested directory uri
+redirect-trailing-slash = true
+
+# ### Check for existing pre-compressed files
+# Enable to check for existing pre-compressed files (like .gz or .br) before compressing.
+compression-static = true

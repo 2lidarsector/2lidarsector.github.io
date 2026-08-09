@@ -5,7 +5,9 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "deploy": "wasmer deploy",
+    "deploy:local": "wasmer run . --net"
   },
   "dependencies": {
     "@mercuryworkshop/bare-as-module3": "^2.2.5",
