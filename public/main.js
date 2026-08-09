@@ -453,6 +453,27 @@ const navAddress = document.getElementById("nav-address");
 const browserAddress = document.getElementById("browser-address-input");
 const navEngine = document.getElementById("nav-engine");
 const panicOverlay = document.getElementById("panic-overlay");
+const btnToggleNav = document.getElementById("btn-toggle-nav");
+const navToggleLabel = document.getElementById("btn-toggle-nav-label");
+
+const NAV_HIDE_KEY = "arx-no-nav";
+
+function applyNavPref() {
+  const hidden = localStorage.getItem(NAV_HIDE_KEY) === "1";
+  document.body.classList.toggle("no-nav", hidden);
+  if (navToggleLabel) navToggleLabel.textContent = hidden ? "Show bar" : "Hide bar";
+}
+
+function setNavHidden(hidden) {
+  localStorage.setItem(NAV_HIDE_KEY, hidden ? "1" : "0");
+  applyNavPref();
+}
+
+if (btnToggleNav) {
+  btnToggleNav.addEventListener("click", () => {
+    setNavHidden(!document.body.classList.contains("no-nav"));
+  });
+}
 
 if (window.ARX && ARX.settings) {
   const savedUrl = ARX.settings.ENGINES[ARX.settings.engineKey()];
@@ -526,7 +547,7 @@ function renderTabs() {
       ${t.incognito ? '<span class="tab-pin-icon incognito-mark">&#128065;</span>' : ""}
       ${t.pinned ? '<span class="tab-pin-icon">&#128204;</span>' : ""}
       <span class="tab-title">${esc(t.title)}</span>
-      <button class="tab-fs" data-id="${t.id}" title="Fullscreen" ${t.pinned ? "disabled" : ""}>&#10226;</button>
+      <button class="tab-fs" data-id="${t.id}" title="Fullscreen" ${t.pinned ? "disabled" : ""}>&#9974;</button>
       <button class="tab-close" data-id="${t.id}" title="Close tab" ${t.pinned ? "disabled" : ""}>&#10005;</button>
     </div>`
     )
@@ -567,9 +588,9 @@ function onFrameLoad(tab) {
     const href = w.location.href;
     if (!href || href === "about:blank") return;
     const display = decodeUrlForDisplay(href);
-    tab.url = display;
     tab.loadUrl = href;
     tab.proxied = true;
+    if (!tab.local) tab.url = display;
     try {
       tab.title = w.document.title || display;
     } catch (e) {
@@ -620,6 +641,7 @@ async function activateTab(id, doProxy) {
   renderTabs();
   homeView.classList.add("hidden");
   browserView.classList.remove("hidden");
+  applyNavPref();
   window.scrollTo(0, 0);
 }
 
@@ -628,8 +650,9 @@ function openTab(url, title, opts) {
   const tab = {
     id: "t" + ++tabSeq,
     title: title || url,
-    url: url,
+    url: opts.displayUrl || url,
     loadUrl: url,
+    local: /^\/(?!\/)/.test(url),
     proxied: false,
     cloak: opts.cloak || null,
     pinned: !!opts.pinned,
@@ -712,6 +735,8 @@ function showHome() {
   activeTabId = null;
   setActiveFrame(null);
   renderTabs();
+  document.body.classList.remove("no-nav");
+  if (navToggleLabel) navToggleLabel.textContent = "Hide bar";
   browserView.classList.add("hidden");
   homeView.classList.remove("hidden");
   window.scrollTo(0, 0);
@@ -796,7 +821,11 @@ async function openGameCamouflaged(href, name, cloak) {
     encodeURIComponent(inner) +
     "&title=" +
     encodeURIComponent(name || "Untitled document");
-  openTab(camo, (name || "Document") + " - Google Docs", { proxy: false, cloak: cloak || "docs" });
+  openTab(camo, (name || "Document") + " - Google Docs", {
+    proxy: false,
+    cloak: cloak || "docs",
+    displayUrl: "/document/d/" + encodeURIComponent(name || "document"),
+  });
 }
 
 function openGame(href, name, cloak) {
@@ -940,6 +969,7 @@ document.getElementById("browser-form").addEventListener("submit", (e) => {
   tab.title = url;
   tab.proxied = false;
   tab.loadUrl = url;
+  tab.local = /^\/(?!\/)/.test(url);
   activateTab(tab.id, !/^(blob|data|about|javascript|file):/i.test(url));
 });
 navEngine.addEventListener("change", () => {
@@ -1291,6 +1321,80 @@ if (recentGrid) {
     openGame(href, name, cloak);
   });
 }
+
+// ---- migrate stale local names/paths from earlier builds ----
+
+const OLD_NAME_TO_NEW = {
+  "Sudoku": "Number Grid",
+  "Doodle Jump": "Bounce",
+  "Snake": "Path Study",
+  "2048": "Number Merge",
+  "Pong": "Rally",
+  "Breakout": "Block Clearing",
+  "Tic-Tac-Toe": "Grid Marks",
+  "Memory Match": "Pairs",
+  "Strike 3D": "Block Studio",
+  "Duel Arena": "Court Rally",
+  "Web Dashers": "Rhythm Studio",
+  "Balatro": "Card Deck",
+  "Tetris": "Block Stack",
+  "Flappy Bird": "Wing Hop",
+  "Solitaire": "Card Sort",
+  "Minesweeper": "Grid Sweep",
+  "Chess": "Board Strategy",
+  "Wordle": "Word Guess",
+};
+
+const OLD_PATH_TO_NEW = {
+  "/apps/sudoku/": "/apps/number-grid/",
+  "/apps/doodle/": "/apps/bounce-up/",
+  "/apps/snake/": "/apps/path-builder/",
+  "/apps/2048/": "/apps/number-merge/",
+  "/apps/pong/": "/apps/rally/",
+  "/apps/breakout/": "/apps/block-clearing/",
+  "/apps/tic-tac-toe/": "/apps/grid-marks/",
+  "/apps/memory/": "/apps/pair-study/",
+  "/apps/strike3d/": "/apps/block-studio/",
+  "/apps/duel/": "/apps/court-rally/",
+  "/apps/web-dashers/": "/apps/rhythm-studio/",
+  "/apps/balatro/": "/apps/card-deck/",
+  "/apps/flappy/": "/apps/wing-hop/",
+  "/apps/solitaire/": "/apps/card-sort/",
+  "/apps/minesweeper/": "/apps/grid-sweep/",
+  "/apps/chess/": "/apps/board-strategy/",
+  "/apps/wordle/": "/apps/word-guess/",
+};
+
+function localAppPaths() {
+  return library
+    .filter((g) => g.path && g.path.startsWith("/apps/"))
+    .map((g) => g.path);
+}
+
+function migrateStoredGames() {
+  const paths = localAppPaths();
+  const valid = (href) => !/^\/apps\//.test(href) || paths.indexOf(href) !== -1;
+  try {
+    const recents = recentGames()
+      .map((g) => Object.assign({}, g, {
+        name: OLD_NAME_TO_NEW[g.name] || g.name,
+        href: OLD_PATH_TO_NEW[g.href] || g.href,
+      }))
+      .filter((g) => valid(g.href));
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recents.slice(0, 5)));
+  } catch (e) {}
+  try {
+    const customs = customGames()
+      .map((g) => Object.assign({}, g, {
+        name: OLD_NAME_TO_NEW[g.name] || g.name,
+        path: OLD_PATH_TO_NEW[g.path] || g.path,
+      }))
+      .filter((g) => valid(g.path));
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(customs));
+  } catch (e) {}
+}
+
+migrateStoredGames();
 
 renderRecent();
 

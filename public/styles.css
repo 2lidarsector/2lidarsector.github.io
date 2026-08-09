@@ -624,6 +624,19 @@ a {
   color: var(--accent);
   background: rgba(109, 125, 246, 0.08);
 }
+.browser-btn.btn-wide {
+  width: auto;
+  padding: 0 12px;
+  gap: 7px;
+}
+.btn-label {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+body.no-nav .navbar {
+  display: none;
+}
 
 .browser-address {
   flex: 1;

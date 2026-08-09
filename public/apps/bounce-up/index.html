@@ -36,7 +36,7 @@ const overEl = document.getElementById("over");
 const W = c.width, H = c.height;
 
 let dood, plats, score, over, running, camY, best = 0;
-try { best = parseInt(localStorage.getItem("arx-doodle-best") || "0", 10); } catch (e) {}
+try { best = parseInt(localStorage.getItem("arx-bounce-best") || localStorage.getItem("arx-doodle-best") || "0", 10); } catch (e) {}
 bestEl.textContent = best;
 
 const GRAV = 0.28, JUMP = -8.2, MOVE = 4.6;
@@ -90,8 +90,8 @@ function frame() {
     scoreEl.textContent = score;
   }
 
-  while (plats[plats.length - 1].y > camY) {
-    plats.push(makePlat(camY + H));
+  while (plats[0].y < camY + H) {
+    plats.unshift(makePlat(plats[0].y + 60));
   }
   plats = plats.filter(p => p.y > camY - 40);
 
@@ -104,7 +104,7 @@ function gameOver() {
   over = true;
   document.getElementById("final").textContent = score;
   overEl.classList.add("show");
-  if (score > best) { best = score; bestEl.textContent = best; try { localStorage.setItem("arx-doodle-best", String(best)); } catch (e) {} }
+  if (score > best) { best = score; bestEl.textContent = best; try { localStorage.setItem("arx-bounce-best", String(best)); localStorage.removeItem("arx-doodle-best"); } catch (e) {} }
 }
 
 function draw() {
