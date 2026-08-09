@@ -11,6 +11,9 @@ window.ARX = window.ARX || {};
     openMode: "embed",
     panic: "google",
     panicKey: "`",
+    camo: "off",
+    customCloakTitle: "",
+    customCloakIcon: "",
   };
   var ENGINES = {
     google: "https://www.google.com/search?q=%s",
@@ -55,7 +58,22 @@ window.ARX = window.ARX || {};
       title: "DeltaMath",
       icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230B5394'/><path d='M22 74L50 24l28 50z' fill='none' stroke='white' stroke-width='8' stroke-linejoin='round'/><path d='M50 24v50' stroke='white' stroke-width='6' opacity='0.65'/></svg>",
     },
+    custom: {
+      title: "Custom",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%2342454d'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white' font-family='Arial'>&#9679;</text></svg>",
+    },
   };
+
+  function emojiFavicon(emoji) {
+    var e = encodeURIComponent(String(emoji || ""));
+    return "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231a1d27'/><text x='50' y='74' font-size='64' text-anchor='middle' fill='white'>" + e + "</text></svg>";
+  }
+  function textFavicon(text) {
+    var first = String(text || "").trim().charAt(0).toUpperCase() || "?";
+    return "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23" + "6d7df6" + "'/><text x='50' y='72' font-size='60' font-family='Georgia,serif' font-weight='bold' text-anchor='middle' fill='white'>" + encodeURIComponent(first) + "</text></svg>";
+  }
+  function customCloakTitle() { return load().customCloakTitle || ""; }
+  function customCloakIcon() { return load().customCloakIcon || ""; }
 
   var THEME_BASES = {
     midnight: { bg: "#0a0c14", surface: "#0f121d", surface2: "#141826", card: "#161b2b", accent: "#6d7df6", accent2: "#2dd4bf", text: "#e7eaf3" },
@@ -178,6 +196,7 @@ window.ARX = window.ARX || {};
   function openMode() { return load().openMode; }
   function panicTarget() { return load().panic; }
   function panicKey() { return load().panicKey || "`"; }
+  function camoMode() { return load().camo || "off"; }
 
   function comboFromEvent(e) {
     if (
@@ -217,14 +236,27 @@ window.ARX = window.ARX || {};
   function applyCloakName(name) {
     var c = CLOAKS[name] || CLOAKS.default;
     var doc = topDoc();
-    doc.title = c.title;
+    var title = c.title;
+    var icon = c.icon;
+    if (name === "custom") {
+      var ct = customCloakTitle();
+      var ci = customCloakIcon();
+      if (ct) title = ct;
+      if (ci) {
+        if (/^emoji:\s*(.+)$/.test(ci)) icon = emojiFavicon(RegExp.$1);
+        else if (/^url:\s*(.+)$/.test(ci)) icon = RegExp.$1;
+        else if (/^data:|^https?:/i.test(ci)) icon = ci;
+        else icon = textFavicon(ci);
+      }
+    }
+    doc.title = title;
     var link = doc.querySelector('link[rel="icon"]');
     if (!link) {
       link = doc.createElement("link");
       link.rel = "icon";
       doc.head.appendChild(link);
     }
-    link.href = c.icon;
+    link.href = icon;
   }
 
   function applyCloak() {
@@ -317,12 +349,15 @@ window.ARX = window.ARX || {};
     cloakName: cloakName,
     applyCloak: applyCloak,
     applyCloakName: applyCloakName,
+    customCloakTitle: customCloakTitle,
+    customCloakIcon: customCloakIcon,
     themeName: themeName,
     themeCustom: themeCustom,
     applyTheme: applyTheme,
     openMode: openMode,
     panicTarget: panicTarget,
     panicKey: panicKey,
+    camoMode: camoMode,
     comboFromEvent: comboFromEvent,
     formatKey: formatKey,
     aboutBlank: aboutBlank,
@@ -335,6 +370,9 @@ window.ARX = window.ARX || {};
   var transportUrlInput = document.getElementById("set-transport-url");
   var transportCustomRow = document.getElementById("transport-custom-row");
   var cloakSel = document.getElementById("set-cloak");
+  var cloakCustomRow = document.getElementById("cloak-custom-row");
+  var cloakTitleInput = document.getElementById("set-cloak-title");
+  var cloakIconInput = document.getElementById("set-cloak-icon");
   var themeSel = document.getElementById("set-theme");
   var themeCustomRow = document.getElementById("theme-custom-row");
   var themeBg = document.getElementById("set-theme-bg");
@@ -342,6 +380,7 @@ window.ARX = window.ARX || {};
   var themeAccent2 = document.getElementById("set-theme-accent2");
   var themeText = document.getElementById("set-theme-text");
   var openModeSel = document.getElementById("set-open-mode");
+  var camoSel = document.getElementById("set-camo");
   var panicSel = document.getElementById("set-panic");
   var panicKeyInput = document.getElementById("set-panic-key");
   var configExportBtn = document.getElementById("btn-config-export");
@@ -354,6 +393,15 @@ window.ARX = window.ARX || {};
     if (!transportCustomRow || !transportUrlInput) return;
     transportCustomRow.classList.toggle("hidden", transportSel.value !== "custom");
     if (transportSel.value === "custom") transportUrlInput.value = transportUrl();
+  }
+
+  function syncCloakRow() {
+    if (!cloakCustomRow) return;
+    cloakCustomRow.classList.toggle("hidden", cloakSel.value !== "custom");
+    if (cloakSel.value === "custom") {
+      if (cloakTitleInput) cloakTitleInput.value = customCloakTitle();
+      if (cloakIconInput) cloakIconInput.value = customCloakIcon();
+    }
   }
 
   function syncThemeRow() {
@@ -388,7 +436,13 @@ window.ARX = window.ARX || {};
   }
   if (cloakSel) {
     cloakSel.value = cloakName();
-    cloakSel.addEventListener("change", function () { set({ cloak: cloakSel.value }); applyCloak(); });
+    cloakSel.addEventListener("change", function () { set({ cloak: cloakSel.value }); syncCloakRow(); applyCloak(); });
+  }
+  if (cloakTitleInput) {
+    cloakTitleInput.addEventListener("input", function () { set({ customCloakTitle: cloakTitleInput.value }); applyCloak(); });
+  }
+  if (cloakIconInput) {
+    cloakIconInput.addEventListener("input", function () { set({ customCloakIcon: cloakIconInput.value }); applyCloak(); });
   }
   if (themeSel) {
     themeSel.value = themeName();
@@ -397,6 +451,10 @@ window.ARX = window.ARX || {};
   if (openModeSel) {
     openModeSel.value = openMode();
     openModeSel.addEventListener("change", function () { set({ openMode: openModeSel.value }); });
+  }
+  if (camoSel) {
+    camoSel.value = camoMode();
+    camoSel.addEventListener("change", function () { set({ camo: camoSel.value }); });
   }
   if (panicSel) {
     panicSel.value = panicTarget();
@@ -487,10 +545,12 @@ window.ARX = window.ARX || {};
     if (cloakSel) cloakSel.value = cloakName();
     if (themeSel) themeSel.value = themeName();
     if (openModeSel) openModeSel.value = openMode();
+    if (camoSel) camoSel.value = camoMode();
     if (panicSel) panicSel.value = panicTarget();
     if (panicKeyInput) panicKeyInput.value = formatKey(panicKey());
     syncTransportRow();
     syncThemeRow();
+    syncCloakRow();
   });
   if (closeBtn) closeBtn.addEventListener("click", function () { modal.classList.add("hidden"); });
   if (resetBtn) resetBtn.addEventListener("click", function () {
@@ -501,12 +561,16 @@ window.ARX = window.ARX || {};
     if (cloakSel) cloakSel.value = "default";
     if (themeSel) themeSel.value = "midnight";
     if (openModeSel) openModeSel.value = "embed";
+    if (camoSel) camoSel.value = "off";
     if (panicSel) panicSel.value = "google";
     if (panicKeyInput) panicKeyInput.value = formatKey("`");
     if (navEngine) navEngine.value = ENGINES.ddg;
     if (transportUrlInput) transportUrlInput.value = "";
+    if (cloakTitleInput) cloakTitleInput.value = "";
+    if (cloakIconInput) cloakIconInput.value = "";
     syncTransportRow();
     syncThemeRow();
+    syncCloakRow();
     applyCloak();
     applyTheme();
   });

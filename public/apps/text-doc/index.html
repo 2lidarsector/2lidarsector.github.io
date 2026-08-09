@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Text Document</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Georgia, "Times New Roman", serif; background: #f3f2ef; color: #1a1a1a; height: 100vh; display: flex; flex-direction: column; }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 18px; background: #fff; border-bottom: 1px solid #e0ddd8; font-family: Arial, sans-serif; }
+  .logo { font-size: 18px; }
+  .name { font-size: 15px; color: #555; border: 1px solid transparent; padding: 3px 8px; border-radius: 4px; }
+  .name:hover { border-color: #d0cecb; }
+  .status { margin-left: auto; font-size: 12px; color: #999; }
+  .toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 12px; background: #fff; border-bottom: 1px solid #e0ddd8; font-family: Arial, sans-serif; flex-wrap: wrap; }
+  .tb { min-width: 28px; height: 28px; padding: 0 8px; border: 1px solid transparent; border-radius: 4px; background: transparent; cursor: pointer; font-size: 13px; color: #333; }
+  .tb:hover { background: #f0efec; }
+  .tb.on { background: #e6f0fb; color: #1a73e8; }
+  .divider { width: 1px; height: 20px; background: #e0ddd8; margin: 0 6px; }
+  .ruler { height: 14px; background: #f3f2ef; flex-shrink: 0; border-bottom: 1px solid #e0ddd8; }
+  .canvas { flex: 1; overflow: auto; padding: 28px 0 80px; }
+  .page { width: min(700px, 92vw); margin: 0 auto; background: #fff; min-height: 900px; box-shadow: 0 1px 4px rgba(0,0,0,.15); padding: 48px 56px; }
+  #doc { min-height: 700px; outline: none; font-size: 15px; line-height: 1.6; }
+  #doc:empty::before { content: "Start typing..."; color: #bbb; }
+  .footer { padding: 8px 18px; font-family: Arial, sans-serif; font-size: 12px; color: #999; background: #fff; border-top: 1px solid #e0ddd8; display: flex; gap: 18px; }
+  @media (max-width: 640px) { .page { padding: 28px 18px; } }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">&#128196;</span>
+    <input class="name" id="doc-name" value="Untitled document" maxlength="60" />
+    <span class="status" id="status">Saved</span>
+  </div>
+  <div class="toolbar" id="toolbar">
+    <button class="tb b" data-cmd="bold" title="Bold">B</button>
+    <button class="tb i" data-cmd="italic" title="Italic"><i>I</i></button>
+    <button class="tb u" data-cmd="underline" title="Underline"><u>U</u></button>
+    <button class="tb" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+    <div class="divider"></div>
+    <button class="tb" data-cmd="insertUnorderedList" title="Bulleted list">&#8226;</button>
+    <button class="tb" data-cmd="insertOrderedList" title="Numbered list">1.</button>
+    <div class="divider"></div>
+    <button class="tb" data-cmd="undo" title="Undo">&#8630;</button>
+    <button class="tb" data-cmd="redo" title="Redo">&#8631;</button>
+    <div class="divider"></div>
+    <button class="tb" data-cmd="formatBlock" data-arg="p" title="Paragraph">P</button>
+    <button class="tb" data-cmd="formatBlock" data-arg="h1" title="Heading 1">H1</button>
+    <button class="tb" data-cmd="formatBlock" data-arg="h2" title="Heading 2">H2</button>
+    <button class="tb" data-cmd="formatBlock" data-arg="blockquote" title="Quote">&#8220;</button>
+  </div>
+  <div class="ruler"></div>
+  <div class="canvas">
+    <div class="page">
+      <div id="doc" contenteditable="true" spellcheck="true"></div>
+    </div>
+  </div>
+  <div class="footer">
+    <span>Words: <b id="words">0</b></span>
+    <span>Chars: <b id="chars">0</b></span>
+  </div>
+<script>
+  var KEY = "arx-textdoc";
+  var docEl = document.getElementById("doc");
+  var statusEl = document.getElementById("status");
+  var nameEl = document.getElementById("doc-name");
+  var saveTimer = null;
+
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ html: docEl.innerHTML, name: nameEl.value }));
+    } catch (e) {}
+    statusEl.textContent = "Saved";
+  }
+
+  function count() {
+    var text = docEl.innerText || "";
+    document.getElementById("words").textContent = text.trim() ? text.trim().split(/\s+/).length : 0;
+    document.getElementById("chars").textContent = text.length;
+  }
+
+  function markDirty() {
+    statusEl.textContent = "Saving...";
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 400);
+    count();
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var d = JSON.parse(raw);
+        docEl.innerHTML = d.html || "";
+        if (d.name) nameEl.value = d.name;
+      }
+    } catch (e) {}
+    count();
+  }
+
+  docEl.addEventListener("input", markDirty);
+  nameEl.addEventListener("input", markDirty);
+
+  document.getElementById("toolbar").addEventListener("click", function (e) {
+    var btn = e.target.closest(".tb");
+    if (!btn) return;
+    e.preventDefault();
+    var cmd = btn.getAttribute("data-cmd");
+    var arg = btn.getAttribute("data-arg") || null;
+    if (cmd === "formatBlock") arg = arg || "p";
+    document.execCommand(cmd, false, arg);
+    docEl.focus();
+    markDirty();
+  });
+
+  document.addEventListener("selectionchange", function () {
+    if (!document.activeElement || document.activeElement !== docEl) return;
+    ["bold", "italic", "underline", "strikeThrough"].forEach(function (c) {
+      var btn = document.querySelector('.tb[data-cmd="' + c + '"]');
+      if (btn) btn.classList.toggle("on", document.queryCommandState(c));
+    });
+  });
+
+  docEl.addEventListener("paste", function (e) {
+    e.preventDefault();
+    var text = (e.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, text);
+    markDirty();
+  });
+
+  window.addEventListener("beforeunload", save);
+  load();
+</script>
+</body>
+</html>

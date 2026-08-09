@@ -16,6 +16,7 @@
     <nav class="nav-links">
       <a href="/" class="nav-link active">Home</a>
       <a href="#library" class="nav-link">Library</a>
+      <a href="#" class="nav-link" id="nav-open-browser">Browser</a>
     </nav>
     <form class="search-bar" id="nav-form">
       <input type="text" id="nav-address" placeholder="Search the web or enter a URL..." autocomplete="off" spellcheck="false" />
@@ -33,8 +34,9 @@
   <main id="home-view">
     <section class="hero">
       <div class="hero-eyebrow">Web Apps</div>
-      <h1>Explore the Web</h1>
+      <h1>Explore <span class="accent-word">the Web</span></h1>
       <p>Search and browse from one place.</p>
+      <div class="hero-clock" id="hero-clock"></div>
       <form class="hero-search" id="hero-form">
         <input type="text" id="hero-address" placeholder="Search Google or type a URL..." autocomplete="off" spellcheck="false" />
         <button type="submit" class="hero-btn">Search</button>
@@ -45,6 +47,26 @@
         <a href="#" data-url="https://www.reddit.com">Reddit</a>
         <a href="#" data-url="https://open.spotify.com">Spotify</a>
       </div>
+    </section>
+
+    <section class="news-section hidden" id="news-section">
+      <div class="news-card">
+        <div class="news-head">
+          <h2>What's new</h2>
+          <button class="settings-btn" id="btn-news-dismiss" title="Dismiss">&#10005;</button>
+        </div>
+        <ul class="news-list" id="news-list"></ul>
+      </div>
+    </section>
+
+    <section class="library-section hidden" id="recent-section">
+      <div class="library-header">
+        <div>
+          <h2>Recently played</h2>
+          <p class="section-sub">Pick up where you left off.</p>
+        </div>
+      </div>
+      <div class="library-grid" id="recent-grid"></div>
     </section>
 
     <section class="library-section" id="library">
@@ -72,9 +94,11 @@
       <form class="browser-address" id="browser-form">
         <input type="text" id="browser-address-input" placeholder="Search the web or enter a URL..." autocomplete="off" spellcheck="false" />
       </form>
+      <button class="browser-btn" id="btn-incognito" title="New incognito tab">&#128100;</button>
+      <button class="browser-btn" id="btn-fullscreen" title="Fullscreen">&#10226;</button>
       <button class="browser-btn" id="btn-exit" title="Close all tabs">&#10005;</button>
     </div>
-    <iframe id="frame" class="browser-frame" title="Browser"></iframe>
+    <div id="frames"></div>
   </main>
 
   <div id="settings-modal" class="hidden">
@@ -111,6 +135,10 @@
         <label for="set-transport-url">Server URL</label>
         <input type="text" id="set-transport-url" placeholder="https://host/bare/ or wss://host/stream/" autocomplete="off" spellcheck="false" />
       </div>
+      <div class="settings-row" id="transport-health-row">
+        <label>Connection status</label>
+        <div class="health-list" id="transport-health"></div>
+      </div>
       <div class="settings-row">
         <label for="set-cloak">Tab name</label>
         <select id="set-cloak">
@@ -123,7 +151,15 @@
           <option value="classroom">Google Classroom</option>
           <option value="ixl">IXL</option>
           <option value="deltamath">DeltaMath</option>
+          <option value="custom">Custom...</option>
         </select>
+      </div>
+      <div class="settings-row hidden" id="cloak-custom-row">
+        <label for="set-cloak-title">Custom tab title + icon</label>
+        <div class="cloak-custom-inputs">
+          <input type="text" id="set-cloak-title" placeholder="Tab title" autocomplete="off" spellcheck="false" maxlength="80" />
+          <input type="text" id="set-cloak-icon" placeholder="emoji: &#128064; | url: link | text" autocomplete="off" spellcheck="false" maxlength="240" />
+        </div>
       </div>
       <div class="settings-row">
         <label for="set-theme">Theme</label>
@@ -148,6 +184,13 @@
         <select id="set-open-mode">
           <option value="embed">Tabs (embed)</option>
           <option value="tab">New browser tab</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label for="set-camo">Camouflage games</label>
+        <select id="set-camo">
+          <option value="off">Off</option>
+          <option value="docs">Fake Google Doc</option>
         </select>
       </div>
       <div class="settings-row">

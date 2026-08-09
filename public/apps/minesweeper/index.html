@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Minesweeper</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: #0b0d1a; color: #e7e9ff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  h1 { font-size: 24px; }
+  .hud { display: flex; gap: 30px; font-size: 15px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .hud b { color: #34d399; }
+  .hud .label { color: #8b90c4; }
+  .controls { display: flex; gap: 12px; align-items: center; }
+  button { padding: 10px 22px; border: none; border-radius: 8px; background: linear-gradient(135deg,#6d5df6,#34d399); color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; }
+  select { padding: 10px 12px; border: 1px solid #262a52; border-radius: 8px; background: #12142a; color: #e7e9ff; font-size: 14px; cursor: pointer; }
+  .wrap { position: relative; }
+  #board { display: grid; gap: 0; }
+  .cell { width: 40px; height: 40px; border: 1px solid #0b0d1a; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .cell.hidden { background: #262a52; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.25); }
+  .cell.hidden:hover { background: #30366b; }
+  .cell.revealed { background: #1a1f33; cursor: default; }
+  .cell.flag { background: #262a52; }
+  .cell.flag:hover { background: #30366b; }
+  .cell.mine-hit { background: #f87171; }
+  .c1 { color: #60a5fa; } .c2 { color: #34d399; } .c3 { color: #f87171; } .c4 { color: #a78bfa; }
+  .c5 { color: #fb923c; } .c6 { color: #22d3ee; } .c7 { color: #f472b6; } .c8 { color: #e5e7eb; }
+  #overlay { position: fixed; inset: 0; background: rgba(11,13,26,.92); display: none; align-items: center; justify-content: center; z-index: 10; }
+  #overlay .panel { background: #12142a; border: 1px solid #262a52; border-radius: 12px; padding: 30px 44px; text-align: center; }
+  #overlay h2 { color: #f472b6; margin-bottom: 10px; font-size: 22px; }
+  #overlay p { color: #e7e9ff; margin-bottom: 4px; }
+  #overlay b { color: #34d399; }
+</style>
+</head>
+<body>
+<h1>Minesweeper</h1>
+<div class="hud">
+  <span class="label">Mines: <b id="mines">10</b></span>
+  <span class="label">Time: <b id="time">0</b></span>
+  <div class="controls">
+    <button id="newGame">New Game</button>
+    <select id="diff">
+      <option value="0" selected>Beginner 9x9 / 10</option>
+      <option value="1">Intermediate 16x16 / 40</option>
+      <option value="2">Expert 30x16 / 99</option>
+    </select>
+  </div>
+</div>
+<div class="wrap">
+  <div id="board"></div>
+</div>
+<div id="overlay">
+  <div class="panel">
+    <h2 id="ovTitle">You Win!</h2>
+    <p id="ovText"></p>
+    <button id="restart">New Game</button>
+  </div>
+</div>
+<script>
+const CONFIGS = [
+  { rows: 9, cols: 9, mines: 10 },
+  { rows: 16, cols: 16, mines: 40 },
+  { rows: 16, cols: 30, mines: 99 }
+];
+const boardEl = document.getElementById("board");
+const minesEl = document.getElementById("mines");
+const timeEl = document.getElementById("time");
+const diffEl = document.getElementById("diff");
+const overlayEl = document.getElementById("overlay");
+const ovTitleEl = document.getElementById("ovTitle");
+const ovTextEl = document.getElementById("ovText");
+
+let cfg, grid, rows, cols, totalMines, flags, revealed, started, over, seconds, timer;
+
+function newGame() {
+  cfg = CONFIGS[+diffEl.value];
+  rows = cfg.rows; cols = cfg.cols; totalMines = cfg.mines;
+  grid = Array.from({ length: rows }, () => Array(cols).fill(0));
+  revealed = Array.from({ length: rows }, () => Array(cols).fill(false));
+  flags = 0; started = false; over = false; seconds = 0;
+  clearInterval(timer);
+  timeEl.textContent = "0";
+  updateHud();
+  overlayEl.style.display = "none";
+  buildBoard();
+}
+
+function buildBoard() {
+  boardEl.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+  boardEl.innerHTML = "";
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell hidden";
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      cell.addEventListener("click", () => onLeft(r, c));
+      cell.addEventListener("contextmenu", (e) => { e.preventDefault(); onRight(r, c); });
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function cellEl(r, c) {
+  return boardEl.children[r * cols + c];
+}
+
+function placeMines(safeR, safeC) {
+  const safeSet = new Set();
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++)
+      safeSet.add((safeR + dr) * cols + (safeC + dc));
+  let placed = 0;
+  while (placed < totalMines) {
+    const r = Math.floor(Math.random() * rows);
+    const c = Math.floor(Math.random() * cols);
+    if (safeSet.has(r * cols + c)) continue;
+    if (grid[r][c] === -1) continue;
+    grid[r][c] = -1;
+    placed++;
+  }
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      if (grid[r][c] === -1) {
+        for (let dr = -1; dr <= 1; dr++)
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] !== -1) grid[nr][nc]++;
+          }
+      }
+}
+
+function startTimer() {
+  started = true;
+  seconds = 0;
+  clearInterval(timer);
+  timer = setInterval(() => {
+    seconds++;
+    timeEl.textContent = seconds;
+  }, 1000);
+}
+
+function updateHud() {
+  minesEl.textContent = totalMines - flags;
+}
+
+function onLeft(r, c) {
+  if (over) return;
+  if (revealed[r][c]) return;
+  const el = cellEl(r, c);
+  if (el.classList.contains("flag")) return;
+  if (!started) {
+    placeMines(r, c);
+    startTimer();
+  }
+  if (grid[r][c] === -1) {
+    lose(r, c);
+    return;
+  }
+  reveal(r, c);
+  checkWin();
+}
+
+function onRight(r, c) {
+  if (over) return;
+  if (revealed[r][c]) return;
+  const el = cellEl(r, c);
+  if (el.classList.contains("flag")) {
+    el.classList.remove("flag");
+    el.textContent = "";
+    flags--;
+  } else {
+    el.classList.add("flag");
+    el.textContent = "\uD83D\uDEA9";
+    flags++;
+  }
+  updateHud();
+}
+
+function reveal(r, c) {
+  if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+  if (revealed[r][c]) return;
+  const el = cellEl(r, c);
+  if (el.classList.contains("flag")) return;
+  revealed[r][c] = true;
+  el.classList.remove("hidden", "flag");
+  el.classList.add("revealed");
+  if (grid[r][c] > 0) {
+    el.textContent = grid[r][c];
+    el.classList.add("c" + grid[r][c]);
+  } else if (grid[r][c] === 0) {
+    el.textContent = "";
+    for (let dr = -1; dr <= 1; dr++)
+      for (let dc = -1; dc <= 1; dc++)
+        if (dr || dc) reveal(r + dr, c + dc);
+  }
+}
+
+function checkWin() {
+  let count = 0;
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      if (revealed[r][c] && grid[r][c] !== -1) count++;
+  if (count === rows * cols - totalMines) {
+    win();
+  }
+}
+
+function win() {
+  over = true;
+  clearInterval(timer);
+  ovTitleEl.textContent = "You Win!";
+  ovTextEl.innerHTML = "Time: <b>" + seconds + "s</b>";
+  overlayEl.style.display = "flex";
+}
+
+function lose(r, c) {
+  over = true;
+  clearInterval(timer);
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++) {
+      const el = cellEl(i, j);
+      if (grid[i][j] === -1) {
+        el.classList.remove("hidden", "flag");
+        el.classList.add("revealed");
+        el.textContent = "\u2B24";
+        if (i === r && j === c) el.classList.add("mine-hit");
+      }
+    }
+  ovTitleEl.textContent = "You Lost!";
+  ovTextEl.innerHTML = "Time: <b>" + seconds + "s</b>";
+  overlayEl.style.display = "flex";
+}
+
+document.getElementById("newGame").addEventListener("click", newGame);
+document.getElementById("restart").addEventListener("click", newGame);
+diffEl.addEventListener("change", newGame);
+newGame();
+</script>
+</body>
+</html>

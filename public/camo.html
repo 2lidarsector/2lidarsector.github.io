@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Google Docs</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%234285F4'/><rect x='26' y='18' width='48' height='64' rx='4' fill='white'/><path d='M34 34h32M34 44h32M34 54h20' stroke='%234285F4' stroke-width='5' stroke-linecap='round'/></svg>" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Google Sans", Arial, sans-serif; background: #edf2fa; height: 100vh; display: flex; flex-direction: column; color: #1f1f1f; }
+  .appbar { display: flex; align-items: center; gap: 8px; height: 64px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
+  .docs-icon { width: 40px; height: 40px; flex-shrink: 0; }
+  .doc-title { min-width: 0; }
+  .doc-title input { border: 1px solid transparent; font-size: 18px; color: #202124; padding: 2px 6px; border-radius: 4px; width: 220px; }
+  .doc-title input:hover, .doc-title input:focus { border-color: #dadce0; outline: none; }
+  .menu-bar { display: flex; align-items: center; gap: 2px; height: 34px; background: #edf2fa; padding: 0 8px; flex-shrink: 0; border-bottom: 1px solid #e0e0e0; }
+  .menu-item { padding: 6px 8px; font-size: 14px; color: #202124; border-radius: 4px; cursor: pointer; }
+  .menu-item:hover { background: #e8eaed; }
+  .spacer { flex: 1; }
+  .share-btn { background: #c2e7ff; color: #001d35; border: none; border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #1a73e8; color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 14px; margin-left: 8px; }
+  .icon-btn { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; font-size: 16px; color: #5f6368; }
+  .icon-btn:hover { background: #e8eaed; }
+  .toolbar { display: flex; align-items: center; gap: 2px; height: 44px; background: #edf2fa; padding: 0 12px; flex-shrink: 0; border-bottom: 1px solid #e0e0e0; flex-wrap: wrap; }
+  .t-btn { padding: 4px 7px; border-radius: 4px; cursor: pointer; font-size: 14px; color: #202124; }
+  .t-btn:hover { background: #e8eaed; }
+  .t-btn.b { font-weight: 700; } .t-btn.i { font-style: italic; } .t-btn.u { text-decoration: underline; }
+  .t-select { padding: 4px 6px; border: 1px solid transparent; background: transparent; font-size: 13px; border-radius: 4px; cursor: pointer; color: #202124; }
+  .t-select:hover { border-color: #dadce0; background: #fff; }
+  .divider { width: 1px; height: 20px; background: #dadce0; margin: 0 6px; }
+  .ruler { height: 16px; background: #edf2fa; flex-shrink: 0; border-bottom: 1px solid #e0e0e0; }
+  .canvas { flex: 1; overflow: auto; padding: 24px 0 60px; }
+  .page { width: min(816px, 92vw); margin: 0 auto; background: #fff; min-height: 1056px; box-shadow: 0 1px 3px rgba(60,64,67,.3); padding: 56px 72px; position: relative; }
+  .fake-text { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.6; color: #5f6368; margin-bottom: 8px; text-align: justify; }
+  .game-wrap { margin: 22px 0; border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(60,64,67,.2); background: #fff; position: relative; }
+  #game { width: 100%; height: 520px; border: 0; display: block; }
+  .fake-h { font-family: Arial, sans-serif; font-size: 15px; font-weight: 700; color: #202124; margin-bottom: 10px; }
+  .caption { font-size: 10px; color: #80868b; text-align: center; margin-top: 4px; }
+  .status { position: fixed; bottom: 12px; right: 16px; font-size: 11px; color: #80868b; background: #fff; border: 1px solid #dadce0; border-radius: 4px; padding: 3px 8px; }
+  @media (max-width: 720px) { .page { padding: 28px 16px; } .doc-title input { width: 140px; } }
+</style>
+</head>
+<body>
+  <div class="appbar">
+    <svg class="docs-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#4285F4"/><rect x="26" y="18" width="48" height="64" rx="4" fill="white"/><path d="M34 34h32M34 44h32M34 54h20" stroke="#4285F4" stroke-width="5" stroke-linecap="round"/></svg>
+    <div class="doc-title"><input id="doc-title" value="Untitled document" /></div>
+    <div class="spacer"></div>
+    <div class="icon-btn" title="History">&#9881;</div>
+    <button class="share-btn">Share</button>
+    <div class="avatar">G</div>
+  </div>
+  <div class="menu-bar">
+    <span class="menu-item">File</span><span class="menu-item">Edit</span><span class="menu-item">View</span><span class="menu-item">Insert</span><span class="menu-item">Format</span><span class="menu-item">Tools</span><span class="menu-item">Extensions</span><span class="menu-item">Help</span>
+  </div>
+  <div class="toolbar">
+    <select class="t-select"><option>Times New Roman</option><option selected>Calibri</option><option>Arial</option><option>Georgia</option></select>
+    <select class="t-select"><option>11</option><option>12</option><option>13</option><option>14</option><option selected>15</option><option>16</option><option>18</option><option>20</option></select>
+    <div class="divider"></div>
+    <span class="t-btn b" title="Bold">B</span>
+    <span class="t-btn i" title="Italic">I</span>
+    <span class="t-btn u" title="Underline">U</span>
+    <div class="divider"></div>
+    <span class="t-btn" title="Text color">A&#9660;</span>
+    <span class="t-btn" title="Bulleted list">&#8226;&nbsp;&#9644;</span>
+    <span class="t-btn" title="Numbered list">1.&nbsp;&#9644;</span>
+    <span class="t-btn" title="Align">&#8801;</span>
+    <span class="t-btn" title="Insert link">&#128279;</span>
+    <span class="t-btn" title="Comment">&#128172;</span>
+    <div class="spacer"></div>
+    <span class="t-btn" title="Print">&#128424;</span>
+    <select class="t-select"><option>100%</option><option>75%</option><option>125%</option><option>150%</option></select>
+  </div>
+  <div class="ruler"></div>
+  <div class="canvas">
+    <div class="page">
+      <div class="fake-h" id="title-text">Field Report</div>
+      <p class="fake-text" id="p1">The following field notes summarize observations recorded during today's session. Students engaged with the material in small groups while I circulated to answer questions and take attendance. Overall engagement was consistent with prior periods, and we covered the planned objectives for the unit.</p>
+      <p class="fake-text" id="p2">Due to the interactive nature of the activity, a portion of class time was used for guided practice. I have included a screenshot of the practice environment below for your records. Any data captured during this period should be added to the shared spreadsheet by the end of the week.</p>
+      <div class="game-wrap">
+        <iframe id="game" title="Embedded content" allow="fullscreen; autoplay; pointer-lock; clipboard-write"></iframe>
+        <div class="caption" id="caption">Figure 1. Guided practice environment used during class.</div>
+      </div>
+      <p class="fake-text" id="p3">Students were reminded to submit completed assignments before the end of the period. If any technical issues arose during the activity, please note them in the comments below so they can be addressed before the next session. Follow-up questions may be directed to the department mailbox.</p>
+      <p class="fake-text" id="p4">The remaining time was spent on review questions drawn from the previous unit. I will post the answer key to the class page this evening and plan to start the next topic during our next meeting.</p>
+    </div>
+  </div>
+  <div class="status">Saved to Drive</div>
+  <script>
+    (function () {
+      try {
+        var q = new URLSearchParams(location.search);
+        var src = q.get("src");
+        var title = q.get("title");
+        var input = document.getElementById("doc-title");
+        if (title) {
+          input.value = title;
+          document.title = title + " - Google Docs";
+        }
+        if (src) {
+          document.getElementById("game").src = src;
+        }
+      } catch (e) {}
+    })();
+  </script>
+</body>
+</html>
