@@ -85,6 +85,9 @@
   .row .kv { flex: 1; min-width: 200px; }
   .row .kv b { font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; word-break: break-all; }
   .row .kv .sub { font-size: 12px; color: #78808f; margin-top: 3px; }
+  .row .kv .key-copy { cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color 0.15s; }
+  .row .kv .key-copy:hover { border-bottom-color: #2dd4bf; }
+  .row .kv .key-copy.copied { color: #2dd4bf; }
   .badge {
     font-size: 11px;
     font-weight: 700;
@@ -239,6 +242,11 @@
         <div class="list" id="flagged-list"></div>
       </div>
 
+      <div class="panel" id="expiring-panel" style="display:none">
+        <h2>&#9203; Expiring soon</h2>
+        <div class="list" id="expiring-list"></div>
+      </div>
+
       <div class="panel">
         <h2>Access keys</h2>
         <div class="bulkbar hidden" id="bulk-bar">
@@ -282,9 +290,11 @@
     var status = document.getElementById("status");
     var keysList = document.getElementById("keys-list");
     var flaggedList = document.getElementById("flagged-list");
+    var expiringList = document.getElementById("expiring-list");
     var loginsList = document.getElementById("logins-list");
     var newKeyInput = document.getElementById("new-key");
     var refreshTimer = null;
+    var lastData = null;
 
     function esc(s) {
       return String(s).replace(/[&<>"']/g, function (c) {
@@ -293,13 +303,17 @@
     }
     function ago(ts) {
       if (!ts) return "?";
-      var s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-      if (s < 60) return s + "s ago";
+      var diff = Date.now() - ts;
+      var neg = diff < 0;
+      var s = Math.floor(Math.abs(diff) / 1000);
       var m = Math.floor(s / 60);
-      if (m < 60) return m + "m ago";
       var h = Math.floor(m / 60);
-      if (h < 24) return h + "h ago";
-      return Math.floor(h / 24) + "d ago";
+      var str;
+      if (s < 60) str = s + "s";
+      else if (m < 60) str = m + "m";
+      else if (h < 24) str = h + "h";
+      else str = Math.floor(h / 24) + "d";
+      return neg ? "in " + str : str + " ago";
     }
     function setStatus(msg, isErr) {
       status.textContent = msg || "";
@@ -321,6 +335,7 @@
     }
 
     function render(d) {
+      lastData = d;
       document.getElementById("ver-badge").textContent = "v" + (d.v || "?");
       var dbBadge = document.getElementById("db-badge");
       if (d.db) {
@@ -358,6 +373,36 @@
         fp.style.display = "none";
       }
 
+      // expiring soon: keys expiring within 7 days (incl. already expired)
+      expiringList.innerHTML = "";
+      var ep = document.getElementById("expiring-panel");
+      var nowMs = Date.now();
+      var weekMs = 7 * 86400000;
+      var expiring = d.keys
+        .filter(function (k) { return k.settings && k.settings.expiresAt > 0 && k.settings.expiresAt - nowMs < weekMs; })
+        .sort(function (a, b) { return a.settings.expiresAt - b.settings.expiresAt; });
+      if (expiring.length) {
+        ep.style.display = "";
+        expiring.forEach(function (k) {
+          var expired = k.settings.expiresAt <= nowMs;
+          var row = document.createElement("div");
+          row.className = "item";
+          var who = document.createElement("div");
+          who.className = "who";
+          who.innerHTML =
+            "<b>" + esc(k.key) + "</b> &nbsp;&middot;&nbsp; " +
+            (expired ? '<span class="badge share">EXPIRED</span>' : "expires " + ago(k.settings.expiresAt));
+          var renew = document.createElement("button");
+          renew.textContent = expired ? "Renew +30d" : "Extend +30d";
+          renew.addEventListener("click", function () { extendKey(k.key, 30); });
+          row.appendChild(who);
+          row.appendChild(renew);
+          expiringList.appendChild(row);
+        });
+      } else {
+        ep.style.display = "none";
+      }
+
       // keys
       keysList.innerHTML = "";
       if (!d.keys.length) {
@@ -388,7 +433,8 @@
           if (st.maxDevices > 0) sub += " &middot; max " + st.maxDevices + " device(s)";
           if (st.expiresAt > 0) sub += " &middot; expires " + (st.expiresAt <= Date.now() ? "now" : ago(st.expiresAt));
           if (st.notes) sub += " &middot; " + esc(st.notes);
-          kv.innerHTML = "<b>" + esc(k.key) + "</b><br><div class='sub'>" + usedBadge + shareBadge + disabledBadge + expiredBadge + sub + "</div>";
+          kv.innerHTML = "<b class='key-copy' title='Click to copy'>" + esc(k.key) + "</b><br><div class='sub'>" + usedBadge + shareBadge + disabledBadge + expiredBadge + sub + "</div>";
+          kv.querySelector(".key-copy").addEventListener("click", function () { copyKey(k.key, this); });
           var chk = document.createElement("input");
           chk.type = "checkbox";
           chk.className = "key-check";
@@ -640,6 +686,49 @@
           setStatus(res.d && res.d.ok ? "Removed." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
           load();
         });
+    }
+
+    // Extend a key's expiry by N days (reuses the settings endpoint; keeps current values).
+    function extendKey(key, days) {
+      var k = null;
+      if (typeof lastData === "object" && lastData) {
+        for (var i = 0; i < lastData.keys.length; i++) {
+          if (lastData.keys[i].key === key) { k = lastData.keys[i]; break; }
+        }
+      }
+      var st = (k && k.settings) || { enabled: true, maxSessions: 0, maxDevices: 0, notes: "" };
+      var expiresAt = st.expiresAt > Date.now() ? st.expiresAt : Date.now();
+      expiresAt += days * 86400000;
+      api("/api/admin/keys/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: key, enabled: st.enabled !== false, maxSessions: st.maxSessions || 0, maxDevices: st.maxDevices || 0, notes: st.notes || "", expiresAt: expiresAt }),
+      }).then(function (res) {
+        setStatus(res.d && res.d.ok ? "Extended " + key + " by " + days + " day(s)." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
+        load();
+      });
+    }
+
+    // One-click copy of a key. Falls back to a temp textarea when the Clipboard API is unavailable.
+    function copyKey(key, el) {
+      function done(ok) {
+        el.classList.add("copied");
+        var orig = el.textContent;
+        el.textContent = ok ? "Copied!" : "Failed";
+        setTimeout(function () { el.classList.remove("copied"); el.textContent = orig; }, 1200);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(key).then(function () { done(true); }, function () { done(false); });
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = key;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { done(document.execCommand("copy")); } catch (err) { done(false); }
+        document.body.removeChild(ta);
+      }
     }
 
     document.getElementById("btn-unlock").addEventListener("click", function () {
