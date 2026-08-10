@@ -120,11 +120,19 @@ async function getKeySettings(key) {
     enabled: s ? s.enabled !== false : true,
     maxSessions: (s && s.maxSessions) || 0,
     maxDevices: (s && s.maxDevices) || 0,
+    notes: (s && s.notes) || "",
+    expiresAt: (s && s.expiresAt) || 0,
   };
 }
 
 async function setKeySettings(key, s) {
-  const next = { enabled: s.enabled !== false, maxSessions: Math.max(0, s.maxSessions | 0), maxDevices: Math.max(0, s.maxDevices | 0) };
+  const next = {
+    enabled: s.enabled !== false,
+    maxSessions: Math.max(0, s.maxSessions | 0),
+    maxDevices: Math.max(0, s.maxDevices | 0),
+    notes: String(s.notes || "").slice(0, 500),
+    expiresAt: Math.max(0, Number(s.expiresAt) || 0),
+  };
   if (store.dbConfigured()) {
     try {
       await store.setKeySettings(key, next);
@@ -149,9 +157,51 @@ async function allKeySettings() {
   const all = loadKeySettingsFile();
   const out = {};
   for (const [k, s] of Object.entries(all)) {
-    out[k] = { enabled: s.enabled !== false, maxSessions: s.maxSessions || 0, maxDevices: s.maxDevices || 0 };
+    out[k] = {
+      enabled: s.enabled !== false,
+      maxSessions: s.maxSessions || 0,
+      maxDevices: s.maxDevices || 0,
+      notes: s.notes || "",
+      expiresAt: s.expiresAt || 0,
+    };
   }
   return out;
+}
+
+// ---------- audit log (who changed what, when) ----------
+
+const auditLog = []; // { action, actor, key, detail, at } in-memory fallback, capped
+
+async function audit(action, actor, key, detail) {
+  const entry = { action, actor, key: key || "", detail: detail || "", at: Date.now() };
+  if (store.dbConfigured()) {
+    try {
+      await store.addAudit(action, actor, key, detail);
+      return;
+    } catch (e) {
+      console.error("[auth] audit write failed, using in-memory", e);
+    }
+  }
+  auditLog.unshift(entry);
+  if (auditLog.length > 300) auditLog.length = 300;
+}
+
+async function auditHistory(limit) {
+  if (store.dbConfigured()) {
+    try {
+      const rows = await store.listAudit(limit);
+      return rows.map((r) => ({
+        action: r.action,
+        actor: r.actor,
+        key: r.key_value,
+        detail: r.detail,
+        at: new Date(r.created_at).getTime(),
+      }));
+    } catch (e) {
+      console.error("[auth] audit list failed, using in-memory", e);
+    }
+  }
+  return auditLog.map((e) => ({ action: e.action, actor: e.actor, key: e.key, detail: e.detail, at: e.at }));
 }
 
 // ---------- sessions ----------
@@ -380,6 +430,13 @@ app.post("/api/login", async (req, res) => {
       res.status(403).json({ ok: false, error: "This key is disabled." });
       return;
     }
+    if (settings.expiresAt > 0 && Date.now() > settings.expiresAt) {
+      res.status(403).json({
+        ok: false,
+        error: "This key has expired. Contact the owner for a new key.",
+      });
+      return;
+    }
     if (settings.maxSessions > 0 || settings.maxDevices > 0) {
       const now = Date.now();
       const active = [...sessions.values()].filter((s) => s.key === key && s.exp > now);
@@ -453,6 +510,7 @@ app.post("/api/admin/keys", requireAdmin, async (req, res) => {
       }
       localKeys.push(key);
     }
+    await audit("add_key", "admin", key, "Key added");
     res.json({ ok: true });
   } catch (e) {
     if (e && e.code === "ER_DUP_ENTRY") {
@@ -499,6 +557,7 @@ app.post("/api/admin/keys/remove", requireAdmin, async (req, res) => {
         saveKeySettingsFile(all);
       }
     }
+    await audit("remove_key", "admin", key, "Key removed");
     res.json({ ok: true });
   } catch (e) {
     console.error("[admin] remove key by value failed", e);
@@ -547,7 +606,7 @@ async function summarize() {
   const keys = [];
   for (const e of byKey.values()) {
     const lastSeen = e.sessions.length ? Math.max(...e.sessions.map((s) => s.lastSeen)) : 0;
-    const st = settings[e.key] || { enabled: true, maxSessions: 0, maxDevices: 0 };
+    const st = settings[e.key] || { enabled: true, maxSessions: 0, maxDevices: 0, notes: "", expiresAt: 0 };
     // Per-session detail: which device (fingerprint), IP, and browser used it.
     const sessions = e.sessions
       .slice()
@@ -610,10 +669,11 @@ app.post("/api/admin/kick", requireAdmin, async (req, res) => {
       removed++;
     }
   }
+  await audit("kick", "admin", key, `Kicked ${removed} session(s)`);
   res.json({ ok: true, removed });
 });
 
-// Update per-key settings (enabled, max sessions, max devices).
+// Update per-key settings (enabled, max sessions, max devices, notes, expiry).
 app.post("/api/admin/keys/settings", requireAdmin, async (req, res) => {
   const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
   if (!key) {
@@ -621,10 +681,13 @@ app.post("/api/admin/keys/settings", requireAdmin, async (req, res) => {
     return;
   }
   const body = req.body || {};
+  const computedEnabled = body.enabled === undefined ? true : !!body.enabled;
   await setKeySettings(key, {
-    enabled: body.enabled === undefined ? true : !!body.enabled,
+    enabled: computedEnabled,
     maxSessions: Number(body.maxSessions) || 0,
     maxDevices: Number(body.maxDevices) || 0,
+    notes: body.notes || "",
+    expiresAt: Number(body.expiresAt) || 0,
   });
   // Disabling a key also kicks its live sessions so it takes effect immediately.
   if (body.enabled === false) {
@@ -632,7 +695,107 @@ app.post("/api/admin/keys/settings", requireAdmin, async (req, res) => {
       if (s.key === key) sessions.delete(token);
     }
   }
+  await audit("settings", "admin", key, `enabled=${computedEnabled} maxSessions=${Number(body.maxSessions) || 0} maxDevices=${Number(body.maxDevices) || 0} expiresAt=${Number(body.expiresAt) || 0}`);
   res.json({ ok: true });
+});
+
+// Bulk actions: kick / disable / remove several keys at once.
+app.post("/api/admin/keys/bulk", requireAdmin, async (req, res) => {
+  const body = req.body || {};
+  const keys = Array.isArray(body.keys) ? body.keys.map((k) => String(k).trim()).filter(Boolean) : [];
+  if (!keys.length) {
+    res.status(400).json({ error: "No keys selected" });
+    return;
+  }
+  const action = body.action;
+  if (!["kick", "disable", "enable", "remove"].includes(action)) {
+    res.status(400).json({ error: "Invalid action" });
+    return;
+  }
+  let removed = 0;
+  for (const key of keys) {
+    if (action === "kick") {
+      for (const [token, s] of sessions) {
+        if (s.key === key) {
+          sessions.delete(token);
+          removed++;
+        }
+      }
+    } else if (action === "remove") {
+      try {
+        if (store.dbConfigured()) await store.removeKeyByValue(key);
+        else {
+          loadLocalKeys();
+          localKeys = localKeys.filter((k) => !safeEqual(k, key));
+          const all = loadKeySettingsFile();
+          if (key in all) {
+            delete all[key];
+            saveKeySettingsFile(all);
+          }
+        }
+      } catch (e) {
+        console.error("[admin] bulk remove failed", e);
+      }
+    } else {
+      const enabled = action === "enable";
+      const st = await getKeySettings(key);
+      await setKeySettings(key, { enabled, maxSessions: st.maxSessions, maxDevices: st.maxDevices, notes: st.notes, expiresAt: st.expiresAt });
+      if (!enabled) {
+        for (const [token, s] of sessions) {
+          if (s.key === key) sessions.delete(token);
+        }
+      }
+    }
+  }
+  await audit("bulk_" + action, "admin", "", `${keys.length} key(s)`);
+  res.json({ ok: true, affected: keys.length, removed });
+});
+
+// Audit log: who changed what, when.
+app.get("/api/admin/audit", requireAdmin, async (req, res) => {
+  try {
+    const rows = await auditHistory(200);
+    res.json({ ok: true, entries: rows });
+  } catch (e) {
+    console.error("[admin] audit failed", e);
+    res.status(500).json({ error: "database error" });
+  }
+});
+
+// Account page for a signed-in user: their own key status / expiry.
+app.get("/api/account", (req, res) => {
+  const token = readToken(req);
+  const payload = token ? parseToken(token) : null;
+  if (!payload) {
+    res.status(401).json({ ok: false, error: "not signed in" });
+    return;
+  }
+  const key = payload.key;
+  getKeySettings(key).then(async (st) => {
+    const isAdminKey = ADMIN_KEY && key === ADMIN_KEY;
+    let loginHistory = [];
+    // Show this key's recent sign-ins from the shared log.
+    for (const l of recentLogins) {
+      if (l.key === key) {
+        loginHistory.push({ ip: l.ip, device: l.device, ua: l.ua, at: l.at });
+        if (loginHistory.length >= 20) break;
+      }
+    }
+    const expiresAt = st.expiresAt || 0;
+    res.json({
+      ok: true,
+      key,
+      isAdminKey,
+      enabled: st.enabled,
+      expiresAt,
+      expiresIn: expiresAt > 0 ? Math.max(0, expiresAt - Date.now()) : null,
+      maxSessions: st.maxSessions,
+      maxDevices: st.maxDevices,
+      loginHistory,
+    });
+  }).catch(() => {
+    res.status(500).json({ ok: false, error: "database error" });
+  });
 });
 
 // Gate everything else (static files, health check, everything) behind a session.

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My account</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230f121d'/><text x='50' y='72' font-size='62' font-family='Georgia,serif' font-weight='bold' fill='%232dd4bf' text-anchor='middle'>&#960;</text></svg>" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 500px at 50% -10%, rgba(109, 125, 246, 0.14), transparent 60%),
+      radial-gradient(900px 400px at 85% 110%, rgba(45, 212, 191, 0.08), transparent 55%),
+      #0a0c14;
+    color: #e8eaf0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .card {
+    width: min(520px, 94vw);
+    background: rgba(17, 21, 30, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 16px;
+    padding: 30px 28px;
+    box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7);
+  }
+  .head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  .mark {
+    width: 46px; height: 46px; border-radius: 13px;
+    background: linear-gradient(135deg, #2dd4bf, #6d7df6);
+    display: grid; place-items: center;
+    font-size: 24px; font-weight: 800; color: #0a0c14;
+    font-family: Georgia, serif;
+    flex-shrink: 0;
+  }
+  h1 { font-size: 20px; letter-spacing: -0.02em; }
+  p.sub { font-size: 13px; color: #78808f; margin-top: 3px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.09); }
+  .row:last-of-type { border-bottom: 0; }
+  .row .label { font-size: 12.5px; color: #78808f; }
+  .row .val { font-size: 13.5px; font-weight: 600; text-align: right; word-break: break-all; }
+  .row .val.mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: 12.5px; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+  .badge.ok { background: rgba(45, 212, 191, 0.14); color: #2dd4bf; }
+  .badge.warn { background: rgba(250, 204, 21, 0.14); color: #facc15; }
+  .badge.err { background: rgba(248, 113, 113, 0.18); color: #f87171; }
+  .panel { margin-top: 18px; }
+  .panel h2 { font-size: 14px; color: #a6adbb; margin-bottom: 6px; }
+  .log-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.07); font-size: 12.5px; }
+  .log-row:last-child { border-bottom: 0; }
+  .log-row .dev { color: #a6adbb; font-family: "JetBrains Mono", Consolas, monospace; font-size: 11.5px; }
+  .log-row .when { color: #78808f; white-space: nowrap; }
+  .actions { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  button {
+    flex: 1;
+    min-width: 120px;
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: #12161f;
+    color: #e8eaf0;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: #1a2030; }
+  button.primary { background: #7a86f8; border-color: #545fd4; color: #fff; }
+  button.primary:hover { background: #8f9aff; }
+  .err { margin-top: 14px; font-size: 13px; color: #f87171; min-height: 16px; }
+  .empty { color: #5d6470; font-size: 12.5px; padding: 6px 0; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <div class="mark">&pi;</div>
+      <div>
+        <h1>My account</h1>
+        <p class="sub" id="sub">Loading&hellip;</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row"><span class="label">Access key</span><span class="val mono" id="ac-key">&mdash;</span></div>
+      <div class="row"><span class="label">Status</span><span class="val" id="ac-status">&mdash;</span></div>
+      <div class="row"><span class="label">Expires</span><span class="val" id="ac-expires">&mdash;</span></div>
+      <div class="row"><span class="label">Max sessions</span><span class="val" id="ac-sessions">&mdash;</span></div>
+      <div class="row"><span class="label">Max devices</span><span class="val" id="ac-devices">&mdash;</span></div>
+    </div>
+
+    <div class="panel">
+      <h2>Recent sign-ins</h2>
+      <div id="ac-logins"></div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="btn-open-app">Open app</button>
+      <button id="btn-logout">Sign out</button>
+    </div>
+    <p class="err" id="err"></p>
+  </div>
+
+<script>
+  (function () {
+    var key = document.getElementById("ac-key");
+    var status = document.getElementById("ac-status");
+    var expires = document.getElementById("ac-expires");
+    var sessions = document.getElementById("ac-sessions");
+    var devices = document.getElementById("ac-devices");
+    var logins = document.getElementById("ac-logins");
+    var err = document.getElementById("err");
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function fmtWhen(ts) {
+      return new Date(ts).toLocaleString();
+    }
+    function fmtLeft(ms) {
+      if (ms == null || ms < 0) return "";
+      var d = Math.floor(ms / 86400000);
+      var h = Math.floor((ms % 86400000) / 3600000);
+      var m = Math.floor((ms % 3600000) / 60000);
+      if (d > 0) return d + "d " + h + "h";
+      if (h > 0) return h + "h " + m + "m";
+      return m + "m";
+    }
+
+    fetch("/api/account", { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || !d.ok) {
+          err.textContent = "Not signed in.";
+          document.getElementById("sub").textContent = "Sign in to view your account.";
+          return;
+        }
+        key.textContent = d.key;
+        var st = document.createElement("span");
+        var stText, stCls;
+        if (!d.enabled) { stText = "Disabled"; stCls = "err"; }
+        else if (d.expiresAt > 0 && Date.now() > d.expiresAt) { stText = "Expired"; stCls = "err"; }
+        else if (d.isAdminKey) { stText = "Admin"; stCls = "ok"; }
+        else { stText = "Active"; stCls = "ok"; }
+        st.className = "badge " + stCls;
+        st.textContent = stText;
+        status.textContent = "";
+        status.appendChild(st);
+
+        if (d.expiresAt > 0) {
+          expires.textContent = fmtWhen(d.expiresAt) + (d.expiresIn != null && d.expiresIn > 0 ? " (" + fmtLeft(d.expiresIn) + " left)" : "");
+        } else {
+          expires.textContent = "Never";
+        }
+        sessions.textContent = d.maxSessions > 0 ? d.maxSessions + " at a time" : "Unlimited";
+        devices.textContent = d.maxDevices > 0 ? d.maxDevices + " devices" : "Unlimited";
+
+        logins.innerHTML = "";
+        if (!d.loginHistory || !d.loginHistory.length) {
+          logins.innerHTML = '<div class="empty">No sign-ins yet.</div>';
+        } else {
+          d.loginHistory.forEach(function (l) {
+            var row = document.createElement("div");
+            row.className = "log-row";
+            var dev = document.createElement("div");
+            dev.className = "dev";
+            dev.textContent = l.ip + (l.device ? " &middot; " + l.device : "");
+            var when = document.createElement("div");
+            when.className = "when";
+            when.textContent = fmtWhen(l.at);
+            row.appendChild(dev);
+            row.appendChild(when);
+            logins.appendChild(row);
+          });
+        }
+        document.getElementById("sub").textContent = "Your access key and status.";
+      })
+      .catch(function () {
+        err.textContent = "Can't reach the server. Try again later.";
+      });
+
+    document.getElementById("btn-open-app").addEventListener("click", function () { location.href = "/app.html"; });
+    document.getElementById("btn-logout").addEventListener("click", function () {
+      try { sessionStorage.removeItem("arx_token"); } catch (e) {}
+      try { document.cookie = "arx_session=; Path=/; Max-Age=0; SameSite=Lax"; } catch (e) {}
+      fetch("/api/logout", { method: "POST" }).catch(function () {}).finally(function () {
+        location.href = "/login.html";
+      });
+    });
+  })();
+</script>
+</body>
+</html>

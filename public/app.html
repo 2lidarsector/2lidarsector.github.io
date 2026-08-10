@@ -196,6 +196,14 @@
         </select>
       </div>
       <div class="settings-row">
+        <label for="set-card-size">Card size</label>
+        <select id="set-card-size">
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+        </select>
+      </div>
+      <div class="settings-row">
         <label for="set-open-mode">Open games in</label>
         <select id="set-open-mode">
           <option value="embed">Tabs (embed)</option>
@@ -241,6 +249,7 @@
         <input type="file" id="config-file-input" accept="application/json,.json" class="hidden" />
         <button class="settings-btn" id="btn-manage-keys">Manage access keys</button>
         <button class="settings-btn" id="btn-admin-dashboard">Admin dashboard</button>
+        <button class="settings-btn" id="btn-account">My account</button>
         <button class="settings-btn" id="btn-settings-reset">Reset</button>
         <button class="settings-btn" id="btn-logout">Sign out</button>
         <button class="settings-btn primary" id="btn-settings-close">Done</button>

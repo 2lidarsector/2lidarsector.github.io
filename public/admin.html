@@ -136,6 +136,16 @@
   }
   .settings-editor button { padding: 6px 12px; font-size: 12.5px; }
   .settings-editor .btn-cancel-settings { color: #78808f; background: transparent; border-color: transparent; }
+  .settings-editor .set-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .settings-editor .set-notes { flex: 1; min-width: 180px; }
+  .settings-editor .set-notes-input { width: 100%; }
+  .settings-editor .set-actions { display: flex; gap: 8px; }
+  .settings-editor input[type="datetime-local"] { padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.26); background: #0d1017; color: #e8eaf0; font-size: 13px; outline: none; }
+  .settings-editor select { padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.26); background: #0d1017; color: #e8eaf0; font-size: 13px; outline: none; }
+  .bulkbar { display: flex; align-items: center; gap: 8px; padding: 8px 0; margin-bottom: 6px; }
+  .bulkbar span { font-size: 12.5px; color: #a6adbb; margin-right: 6px; }
+  .bulkbar button { padding: 6px 12px; font-size: 12.5px; }
+  .row .key-check { align-self: center; margin-right: 4px; accent-color: #7a86f8; }
   .details-panel {
     width: 100%;
     margin-top: 8px;
@@ -182,6 +192,17 @@
   .db-badge.ok { background: rgba(45, 212, 191, 0.14); color: #2dd4bf; }
   .db-badge.err { background: rgba(248, 113, 113, 0.18); color: #f87171; }
   .db-badge.warn { background: rgba(250, 204, 21, 0.14); color: #facc15; }
+  .audit-action {
+    display: inline-block;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: rgba(122, 134, 248, 0.16);
+    color: #9aa4ff;
+    margin-right: 6px;
+  }
   .hidden { display: none; }
 </style>
 </head>
@@ -220,6 +241,14 @@
 
       <div class="panel">
         <h2>Access keys</h2>
+        <div class="bulkbar hidden" id="bulk-bar">
+          <span id="bulk-count"></span>
+          <button id="btn-bulk-kick">Kick</button>
+          <button id="btn-bulk-disable">Disable</button>
+          <button id="btn-bulk-enable">Enable</button>
+          <button class="danger" id="btn-bulk-remove">Remove</button>
+          <button id="btn-bulk-clear">Clear</button>
+        </div>
         <div class="list" id="keys-list"></div>
         <div class="addbar">
           <input type="text" id="new-key" placeholder="New key (paste or generate)" autocomplete="off" spellcheck="false" />
@@ -233,7 +262,12 @@
         <div class="list" id="logins-list"></div>
       </div>
 
-      <p class="hint">Auto-refreshes every 15s. A key is flagged as "possibly shared" when it is used from more than one distinct device (browser fingerprint). Use Kick to force sign-out. IPs are shown for reference only.</p>
+      <div class="panel">
+        <h2>Audit log</h2>
+        <div class="list" id="audit-list"></div>
+      </div>
+
+      <p class="hint">Auto-refreshes every 15s. A key is flagged as "possibly shared" when it is used from more than one distinct device (browser fingerprint). Use Kick to force sign-out. Tick the checkbox next to a key to use bulk actions. IPs are shown for reference only.</p>
       <p class="status" id="status"></p>
     </div>
   </div>
@@ -333,7 +367,7 @@
         keysList.appendChild(e);
       } else {
         d.keys.forEach(function (k) {
-          var st = k.settings || { enabled: true, maxSessions: 0, maxDevices: 0 };
+          var st = k.settings || { enabled: true, maxSessions: 0, maxDevices: 0, notes: "", expiresAt: 0 };
           var row = document.createElement("div");
           row.className = "row";
           var kv = document.createElement("div");
@@ -341,6 +375,7 @@
           var shareBadge = k.sharing ? '<span class="badge share">SHARED</span> ' : '<span class="badge ok">OK</span> ';
           var usedBadge = k.used ? "" : '<span class="badge ips">UNUSED</span> ';
           var disabledBadge = st.enabled ? "" : '<span class="badge share">DISABLED</span> ';
+          var expiredBadge = (st.expiresAt > 0 && Date.now() > st.expiresAt) ? '<span class="badge share">EXPIRED</span> ' : "";
           var sub = "";
           if (k.used) {
             sub = " " + k.sessionCount + " session(s) &middot; " + k.deviceCount + " device(s)";
@@ -351,7 +386,13 @@
           }
           if (st.maxSessions > 0) sub += " &middot; max " + st.maxSessions + " session(s)";
           if (st.maxDevices > 0) sub += " &middot; max " + st.maxDevices + " device(s)";
-          kv.innerHTML = "<b>" + esc(k.key) + "</b><br><div class='sub'>" + usedBadge + shareBadge + disabledBadge + sub + "</div>";
+          if (st.expiresAt > 0) sub += " &middot; expires " + (st.expiresAt <= Date.now() ? "now" : ago(st.expiresAt));
+          if (st.notes) sub += " &middot; " + esc(st.notes);
+          kv.innerHTML = "<b>" + esc(k.key) + "</b><br><div class='sub'>" + usedBadge + shareBadge + disabledBadge + expiredBadge + sub + "</div>";
+          var chk = document.createElement("input");
+          chk.type = "checkbox";
+          chk.className = "key-check";
+          chk.addEventListener("change", function () { updateBulkBar(); });
           var kickBtn = document.createElement("button");
           kickBtn.className = "danger";
           kickBtn.textContent = "Kick";
@@ -367,6 +408,7 @@
           detBtn.textContent = "Details";
           detBtn.disabled = !k.used;
           detBtn.addEventListener("click", function () { toggleDetails(k, row); });
+          row.appendChild(chk);
           row.appendChild(kv);
           row.appendChild(detBtn);
           row.appendChild(kickBtn);
@@ -401,26 +443,70 @@
       }
     }
 
-    // Inline per-key settings editor (enabled, max sessions, max devices).
+    // Inline per-key settings editor (enabled, max sessions, max devices,
+    // notes, expiry duration).
     function toggleSettings(key, row, st) {
       var existing = row.querySelector(".settings-editor");
       if (existing) { existing.remove(); return; }
       var editor = document.createElement("div");
       editor.className = "settings-editor";
+      var expStr = "";
+      var expSel = "never";
+      if (st.expiresAt > 0) {
+        var now = Date.now();
+        if (st.expiresAt <= now) { expSel = "past"; }
+        else {
+          var days = Math.round((st.expiresAt - now) / 86400000);
+          expSel = days > 0 ? "custom" : "past";
+          expStr = new Date(st.expiresAt).toISOString().slice(0, 16);
+        }
+      }
       editor.innerHTML =
-        '<label><input type="checkbox" class="set-enabled" ' + (st.enabled ? "checked" : "") + '> Enabled</label>' +
-        '<label>Max sessions <input type="number" class="set-sessions" min="0" value="' + (st.maxSessions || 0) + '"> (0 = unlimited)</label>' +
-        '<label>Max devices <input type="number" class="set-devices" min="0" value="' + (st.maxDevices || 0) + '"> (0 = unlimited)</label>' +
-        '<button class="primary btn-save-settings">Save</button>' +
-        '<button class="btn-cancel-settings">Close</button>';
+        '<div class="set-row"><label><input type="checkbox" class="set-enabled" ' + (st.enabled ? "checked" : "") + '> Enabled</label></div>' +
+        '<div class="set-row"><label>Max sessions <input type="number" class="set-sessions" min="0" value="' + (st.maxSessions || 0) + '"></label>' +
+        '<label>Max devices <input type="number" class="set-devices" min="0" value="' + (st.maxDevices || 0) + '"></label></div>' +
+        '<div class="set-row set-expiry"><label>Expires in <select class="set-expiry-opt">' +
+        '<option value="never"' + (expSel === "never" ? " selected" : "") + '>Never</option>' +
+        '<option value="1h"' + (expSel === "1h" ? " selected" : "") + '>1 hour</option>' +
+        '<option value="1d"' + (expSel === "1d" ? " selected" : "") + '>1 day</option>' +
+        '<option value="1w"' + (expSel === "1w" ? " selected" : "") + '>1 week</option>' +
+        '<option value="1mo"' + (expSel === "1mo" ? " selected" : "") + '>1 month</option>' +
+        '<option value="6mo"' + (expSel === "6mo" ? " selected" : "") + '>6 months</option>' +
+        '<option value="1y"' + (expSel === "1y" ? " selected" : "") + '>1 year</option>' +
+        '<option value="custom"' + (expSel === "custom" ? " selected" : "") + '>Custom</option>' +
+        '</select></label>' +
+        '<input type="datetime-local" class="set-expiry-custom" value="' + expStr + '"' + (expSel === "custom" ? "" : " style='display:none'") + '>' +
+        '</div>' +
+        '<div class="set-row"><label class="set-notes">Notes <input type="text" class="set-notes-input" maxlength="500" placeholder="e.g. gave to Jake" value="' + esc(st.notes || "") + '"></label></div>' +
+        '<div class="set-actions"><button class="primary btn-save-settings">Save</button>' +
+        '<button class="btn-cancel-settings">Close</button></div>';
+      var expSelEl = editor.querySelector(".set-expiry-opt");
+      var expCustom = editor.querySelector(".set-expiry-custom");
+      expSelEl.addEventListener("change", function () {
+        expCustom.style.display = expSelEl.value === "custom" ? "" : "none";
+      });
       editor.querySelector(".btn-save-settings").addEventListener("click", function () {
         var enabled = editor.querySelector(".set-enabled").checked;
         var maxSessions = Math.max(0, parseInt(editor.querySelector(".set-sessions").value, 10) || 0);
         var maxDevices = Math.max(0, parseInt(editor.querySelector(".set-devices").value, 10) || 0);
+        var notes = editor.querySelector(".set-notes-input").value;
+        var now = Date.now();
+        var expiresAt = 0;
+        var opt = expSelEl.value;
+        if (opt === "1h") expiresAt = now + 3600000;
+        else if (opt === "1d") expiresAt = now + 86400000;
+        else if (opt === "1w") expiresAt = now + 7 * 86400000;
+        else if (opt === "1mo") expiresAt = now + 30 * 86400000;
+        else if (opt === "6mo") expiresAt = now + 180 * 86400000;
+        else if (opt === "1y") expiresAt = now + 365 * 86400000;
+        else if (opt === "custom" && expCustom.value) {
+          var t = new Date(expCustom.value).getTime();
+          if (!isNaN(t)) expiresAt = t;
+        }
         api("/api/admin/keys/settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: key, enabled: enabled, maxSessions: maxSessions, maxDevices: maxDevices }),
+          body: JSON.stringify({ key: key, enabled: enabled, maxSessions: maxSessions, maxDevices: maxDevices, notes: notes, expiresAt: expiresAt }),
         }).then(function (res) {
           setStatus(res.d && res.d.ok ? "Settings saved for " + key + "." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
           editor.remove();
@@ -457,6 +543,70 @@
         panel.appendChild(table);
       }
       row.appendChild(panel);
+    }
+
+    // Bulk selection helpers.
+    function selectedKeys() {
+      var out = [];
+      document.querySelectorAll(".key-check:checked").forEach(function (c) {
+        var row = c.closest(".row");
+        if (row) {
+          var b = row.querySelector(".kv b");
+          if (b) out.push(b.textContent);
+        }
+      });
+      return out;
+    }
+    function updateBulkBar() {
+      var bar = document.getElementById("bulk-bar");
+      var keys = selectedKeys();
+      bar.classList.toggle("hidden", keys.length === 0);
+      document.getElementById("bulk-count").textContent = keys.length + " selected";
+    }
+    function clearBulk() {
+      document.querySelectorAll(".key-check:checked").forEach(function (c) { c.checked = false; });
+      updateBulkBar();
+    }
+    function bulkAction(action) {
+      var keys = selectedKeys();
+      if (!keys.length) return;
+      var labels = { kick: "kick", disable: "disable", enable: "enable", remove: "remove" };
+      if (!confirm("" + keys.length + " key(s): " + labels[action] + "?")) return;
+      api("/api/admin/keys/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: action, keys: keys }),
+      }).then(function (res) {
+        setStatus(res.d && res.d.ok ? "Done: " + res.d.affected + " key(s)." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
+        clearBulk();
+        load();
+      });
+    }
+
+    // Audit log.
+    function loadAudit() {
+      api("/api/admin/audit").then(function (res) {
+        var list = document.getElementById("audit-list");
+        if (!res.d || !res.d.ok || !res.d.entries.length) {
+          list.innerHTML = '<div class="empty">No audit entries yet.</div>';
+          return;
+        }
+        list.innerHTML = "";
+        res.d.entries.forEach(function (en) {
+          var row = document.createElement("div");
+          row.className = "item";
+          var who = document.createElement("div");
+          who.className = "who";
+          var ktxt = en.key ? "<b>" + esc(en.key) + "</b> " : "";
+          who.innerHTML = '<span class="audit-action">' + esc(en.action) + "</span> " + ktxt + "&middot; " + esc(en.actor || "-") + (en.detail ? " &middot; " + esc(en.detail) : "");
+          var when = document.createElement("div");
+          when.className = "when";
+          when.textContent = new Date(en.at).toLocaleString();
+          row.appendChild(who);
+          row.appendChild(when);
+          list.appendChild(row);
+        });
+      }).catch(function () {});
     }
 
     function load() {
@@ -504,6 +654,11 @@
 
     document.getElementById("btn-refresh").addEventListener("click", load);
     document.getElementById("btn-open-app").addEventListener("click", function () { location.href = "/app.html"; });
+    document.getElementById("btn-bulk-kick").addEventListener("click", function () { bulkAction("kick"); });
+    document.getElementById("btn-bulk-disable").addEventListener("click", function () { bulkAction("disable"); });
+    document.getElementById("btn-bulk-enable").addEventListener("click", function () { bulkAction("enable"); });
+    document.getElementById("btn-bulk-remove").addEventListener("click", function () { bulkAction("remove"); });
+    document.getElementById("btn-bulk-clear").addEventListener("click", clearBulk);
     document.getElementById("btn-generate").addEventListener("click", function () {
       var bytes = new Uint8Array(16);
       crypto.getRandomValues(bytes);
@@ -525,10 +680,10 @@
     });
     newKeyInput.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("btn-add").click(); });
 
-    if (adminKey) { showDash(true); load(); }
+    if (adminKey) { showDash(true); load(); loadAudit(); }
 
     refreshTimer = setInterval(function () {
-      if (adminKey) load();
+      if (adminKey) { load(); loadAudit(); }
     }, 15000);
   })();
 </script>

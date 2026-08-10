@@ -8,6 +8,7 @@ window.ARX = window.ARX || {};
     proxyUrl: "",
     cloak: "default",
     theme: "midnight",
+    cardSize: "medium",
     openMode: "embed",
     panic: "google",
     panicKey: "`",
@@ -173,6 +174,23 @@ window.ARX = window.ARX || {};
     el.textContent = css;
   }
 
+  // Library card density: small / medium / large grid.
+  function applyCardSize(size) {
+    var el = document.getElementById("arx-cardsize");
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "arx-cardsize";
+      document.head.appendChild(el);
+    }
+    var css = "";
+    if (size === "small") {
+      css = ".library-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}.app-card .card-title{font-size:12px;}";
+    } else if (size === "large") {
+      css = ".library-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}.app-card .card-title{font-size:14.5px;}";
+    }
+    el.textContent = css;
+  }
+
   function load() {
     var s = {};
     try { s = JSON.parse(localStorage.getItem("arx-settings") || "{}"); } catch (e) {}
@@ -200,6 +218,7 @@ window.ARX = window.ARX || {};
   function cloakName() { return load().cloak; }
   function themeName() { return load().theme; }
   function themeCustom() { return load().themeCustom || {}; }
+  function cardSize() { return load().cardSize || "medium"; }
   function openMode() { return load().openMode; }
   function panicTarget() { return load().panic; }
   function panicKey() { return load().panicKey || "`"; }
@@ -362,6 +381,8 @@ window.ARX = window.ARX || {};
     themeName: themeName,
     themeCustom: themeCustom,
     applyTheme: applyTheme,
+    cardSize: cardSize,
+    applyCardSize: applyCardSize,
     openMode: openMode,
     panicTarget: panicTarget,
     panicKey: panicKey,
@@ -457,6 +478,14 @@ window.ARX = window.ARX || {};
   if (themeSel) {
     themeSel.value = themeName();
     themeSel.addEventListener("change", function () { set({ theme: themeSel.value }); syncThemeRow(); applyTheme(); });
+  }
+  var cardSizeSel = document.getElementById("set-card-size");
+  if (cardSizeSel) {
+    cardSizeSel.value = cardSize();
+    cardSizeSel.addEventListener("change", function () {
+      set({ cardSize: cardSizeSel.value });
+      applyCardSize(cardSizeSel.value);
+    });
   }
   if (openModeSel) {
     openModeSel.value = openMode();
@@ -724,6 +753,8 @@ window.ARX = window.ARX || {};
   });
   var adminDashBtn = document.getElementById("btn-admin-dashboard");
   if (adminDashBtn) adminDashBtn.addEventListener("click", function () { location.href = "/admin.html"; });
+  var accountBtn = document.getElementById("btn-account");
+  if (accountBtn) accountBtn.addEventListener("click", function () { location.href = "/account.html"; });
   if (keysUnlockBtn) keysUnlockBtn.addEventListener("click", function () {
     storedAdminKey = (keysAdminInput ? keysAdminInput.value : "").trim();
     if (!storedAdminKey) {
@@ -779,4 +810,5 @@ window.ARX = window.ARX || {};
 
   applyCloak();
   applyTheme();
+  applyCardSize(cardSize());
 })();

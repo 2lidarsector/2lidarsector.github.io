@@ -44,10 +44,51 @@ export async function ensureTable() {
        enabled TINYINT(1) NOT NULL DEFAULT 1,
        max_sessions INT NOT NULL DEFAULT 0,
        max_devices INT NOT NULL DEFAULT 0,
+       notes VARCHAR(500) NOT NULL DEFAULT '',
+       expires_at BIGINT NOT NULL DEFAULT 0,
        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
        CONSTRAINT fk_key_settings_key FOREIGN KEY (key_value) REFERENCES access_keys(key_value) ON DELETE CASCADE
      ) ENGINE=InnoDB`
   );
+  // Bring pre-existing tables up to date (idempotent, ignores "duplicate column").
+  for (const col of [
+    "ADD COLUMN notes VARCHAR(500) NOT NULL DEFAULT ''",
+    "ADD COLUMN expires_at BIGINT NOT NULL DEFAULT 0",
+  ]) {
+    try {
+      await p.query(`ALTER TABLE key_settings ${col}`);
+    } catch (e) {
+      if (!/duplicate/i.test(e.message || "")) throw e;
+    }
+  }
+  await p.query(
+    `CREATE TABLE IF NOT EXISTS audit_log (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       action VARCHAR(40) NOT NULL,
+       actor VARCHAR(255) NOT NULL DEFAULT '',
+       key_value VARCHAR(255) NOT NULL DEFAULT '',
+       detail VARCHAR(500) NOT NULL DEFAULT '',
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       INDEX idx_audit_created (created_at)
+     ) ENGINE=InnoDB`
+  );
+}
+
+export async function addAudit(action, actor, keyValue, detail) {
+  const p = await getPool();
+  await p.query(
+    "INSERT INTO audit_log (action, actor, key_value, detail) VALUES (?, ?, ?, ?)",
+    [action, String(actor || "").slice(0, 255), String(keyValue || "").slice(0, 255), String(detail || "").slice(0, 500)]
+  );
+}
+
+export async function listAudit(limit) {
+  const p = await getPool();
+  const [rows] = await p.query(
+    "SELECT action, actor, key_value, detail, created_at FROM audit_log ORDER BY id DESC LIMIT ?",
+    [limit || 200]
+  );
+  return rows;
 }
 
 export async function listKeys() {
@@ -90,38 +131,54 @@ export async function countKeys() {
   return rows[0] ? rows[0].c : 0;
 }
 
-// Per-key settings: enabled, max concurrent sessions, max distinct devices.
+// Per-key settings: enabled, max concurrent sessions, max distinct devices,
+// notes, and expiry (epoch ms; 0 = never expires).
 // 0 for max_sessions/max_devices means unlimited.
 export async function getKeySettings(key) {
   const p = await getPool();
   const [rows] = await p.query(
-    "SELECT enabled, max_sessions, max_devices FROM key_settings WHERE key_value = ?",
+    "SELECT enabled, max_sessions, max_devices, notes, expires_at FROM key_settings WHERE key_value = ?",
     [key]
   );
-  if (!rows.length) return { enabled: true, maxSessions: 0, maxDevices: 0 };
+  if (!rows.length) return { enabled: true, maxSessions: 0, maxDevices: 0, notes: "", expiresAt: 0 };
   return {
     enabled: !!rows[0].enabled,
     maxSessions: rows[0].max_sessions || 0,
     maxDevices: rows[0].max_devices || 0,
+    notes: rows[0].notes || "",
+    expiresAt: rows[0].expires_at || 0,
   };
 }
 
 export async function setKeySettings(key, s) {
   const p = await getPool();
   await p.query(
-    `INSERT INTO key_settings (key_value, enabled, max_sessions, max_devices)
-     VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), max_sessions = VALUES(max_sessions), max_devices = VALUES(max_devices)`,
-    [key, s.enabled ? 1 : 0, s.maxSessions || 0, s.maxDevices || 0]
+    `INSERT INTO key_settings (key_value, enabled, max_sessions, max_devices, notes, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       enabled = VALUES(enabled),
+       max_sessions = VALUES(max_sessions),
+       max_devices = VALUES(max_devices),
+       notes = VALUES(notes),
+       expires_at = VALUES(expires_at)`,
+    [key, s.enabled ? 1 : 0, s.maxSessions || 0, s.maxDevices || 0, s.notes || "", s.expiresAt || 0]
   );
 }
 
 export async function listKeySettings() {
   const p = await getPool();
   const [rows] = await p.query(
-    "SELECT key_value, enabled, max_sessions, max_devices FROM key_settings"
+    "SELECT key_value, enabled, max_sessions, max_devices, notes, expires_at FROM key_settings"
   );
   const out = {};
-  for (const r of rows) out[r.key_value] = { enabled: !!r.enabled, maxSessions: r.max_sessions || 0, maxDevices: r.max_devices || 0 };
+  for (const r of rows) {
+    out[r.key_value] = {
+      enabled: !!r.enabled,
+      maxSessions: r.max_sessions || 0,
+      maxDevices: r.max_devices || 0,
+      notes: r.notes || "",
+      expiresAt: r.expires_at || 0,
+    };
+  }
   return out;
 }
