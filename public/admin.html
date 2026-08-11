@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Admin</title>
+<title>Coordinator</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230f121d'/><text x='50' y='72' font-size='62' font-family='Georgia,serif' font-weight='bold' fill='%232dd4bf' text-anchor='middle'>&#960;</text></svg>" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -212,7 +212,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>Admin dashboard<small>access keys &amp; usage</small></h1>
+      <h1>Coordinator dashboard<small>access codes &amp; usage</small></h1>
       <div class="actions">
         <span class="db-badge hidden" id="db-badge"></span>
         <span class="db-badge warn" id="ver-badge"></span>
@@ -222,23 +222,23 @@
     </header>
 
     <div class="unlock" id="unlock-card">
-      <h2>Admin access</h2>
-      <p>Enter the admin key to manage access keys and view usage.</p>
-      <input type="password" id="admin-key" placeholder="Admin key" autocomplete="off" spellcheck="false" />
+      <h2>Coordinator access</h2>
+      <p>Enter the coordinator code to manage access codes and view usage.</p>
+      <input type="password" id="admin-key" placeholder="Coordinator code" autocomplete="off" spellcheck="false" />
       <button id="btn-unlock">Unlock</button>
       <p class="err" id="unlock-err"></p>
     </div>
 
     <div id="dashboard" style="display:none">
       <div class="cards">
-        <div class="card"><div class="num" id="stat-keys">0</div><div class="lbl">Total keys</div></div>
+        <div class="card"><div class="num" id="stat-keys">0</div><div class="lbl">Total codes</div></div>
         <div class="card"><div class="num" id="stat-active">0</div><div class="lbl">Active sessions</div></div>
         <div class="card"><div class="num" id="stat-ips">0</div><div class="lbl">Unique IPs online</div></div>
         <div class="card alert" id="stat-flag-card"><div class="num" id="stat-flagged">0</div><div class="lbl">Possibly shared</div></div>
       </div>
 
       <div class="panel" id="flagged-panel" style="display:none">
-        <h2>&#9888; Possibly shared keys</h2>
+        <h2>&#9888; Possibly shared codes</h2>
         <div class="list" id="flagged-list"></div>
       </div>
 
@@ -248,7 +248,7 @@
       </div>
 
       <div class="panel">
-        <h2>Access keys</h2>
+        <h2>Access codes</h2>
         <div class="bulkbar hidden" id="bulk-bar">
           <span id="bulk-count"></span>
           <button id="btn-bulk-kick">Kick</button>
@@ -259,9 +259,9 @@
         </div>
         <div class="list" id="keys-list"></div>
         <div class="addbar">
-          <input type="text" id="new-key" placeholder="New key (paste or generate)" autocomplete="off" spellcheck="false" />
+          <input type="text" id="new-key" placeholder="New code (paste or generate)" autocomplete="off" spellcheck="false" />
           <button id="btn-generate">Generate</button>
-          <button class="primary" id="btn-add">Add key</button>
+          <button class="primary" id="btn-add">Add code</button>
         </div>
       </div>
 
@@ -275,7 +275,7 @@
         <div class="list" id="audit-list"></div>
       </div>
 
-      <p class="hint">Auto-refreshes every 15s. A key is flagged as "possibly shared" when it is used from more than one distinct device (browser fingerprint). Use Kick to force sign-out. Tick the checkbox next to a key to use bulk actions. IPs are shown for reference only.</p>
+      <p class="hint">Auto-refreshes every 15s. A code is flagged as "possibly shared" when it is used from more than one distinct device (browser fingerprint). Use Kick to force sign-out. Tick the checkbox next to a code to use bulk actions. IPs are shown for reference only.</p>
       <p class="status" id="status"></p>
     </div>
   </div>
@@ -324,7 +324,7 @@
       dash.style.display = show ? "" : "none";
     }
     function headers() {
-      return { "x-admin-key": adminKey };
+      return { "x-teacher-key": adminKey };
     }
     function api(url, opts) {
       opts = opts || {};
@@ -408,7 +408,7 @@
       if (!d.keys.length) {
         var e = document.createElement("div");
         e.className = "empty";
-        e.textContent = "No keys yet.";
+        e.textContent = "No codes yet.";
         keysList.appendChild(e);
       } else {
         d.keys.forEach(function (k) {
@@ -549,7 +549,7 @@
           var t = new Date(expCustom.value).getTime();
           if (!isNaN(t)) expiresAt = t;
         }
-        api("/api/admin/keys/settings", {
+        api("/api/manage/keys/settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: key, enabled: enabled, maxSessions: maxSessions, maxDevices: maxDevices, notes: notes, expiresAt: expiresAt }),
@@ -617,13 +617,13 @@
       var keys = selectedKeys();
       if (!keys.length) return;
       var labels = { kick: "kick", disable: "disable", enable: "enable", remove: "remove" };
-      if (!confirm("" + keys.length + " key(s): " + labels[action] + "?")) return;
-      api("/api/admin/keys/bulk", {
+      if (!confirm("" + keys.length + " code(s): " + labels[action] + "?")) return;
+      api("/api/manage/keys/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: action, keys: keys }),
       }).then(function (res) {
-        setStatus(res.d && res.d.ok ? "Done: " + res.d.affected + " key(s)." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
+        setStatus(res.d && res.d.ok ? "Done: " + res.d.affected + " code(s)." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
         clearBulk();
         load();
       });
@@ -631,7 +631,7 @@
 
     // Audit log.
     function loadAudit() {
-      api("/api/admin/audit").then(function (res) {
+      api("/api/manage/audit").then(function (res) {
         var list = document.getElementById("audit-list");
         if (!res.d || !res.d.ok || !res.d.entries.length) {
           list.innerHTML = '<div class="empty">No audit entries yet.</div>';
@@ -656,7 +656,7 @@
     }
 
     function load() {
-      api("/api/admin/overview").then(function (res) {
+      api("/api/manage/overview").then(function (res) {
         if (res.status === 403) {
           adminKey = "";
           sessionStorage.removeItem("arx_admin_key");
@@ -665,14 +665,14 @@
           return;
         }
         if (res.d && res.d.ok) render(res.d);
-        else if (res.d && res.d.v) { document.getElementById("ver-badge").textContent = "v" + res.d.v; setStatus("Session expired or admin key invalid.", true); }
+        else if (res.d && res.d.v) { document.getElementById("ver-badge").textContent = "v" + res.d.v; setStatus("Session expired or coordinator code invalid.", true); }
         else setStatus((res.d && res.d.error) || "Failed to load.", true);
       }).catch(function () { setStatus("Network error.", true); });
     }
 
     function kickKey(key) {
-      if (!confirm("Kick all sessions for key '" + key + "'?")) return;
-      api("/api/admin/kick", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
+      if (!confirm("Kick all sessions for code '" + key + "'?")) return;
+      api("/api/manage/kick", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
         .then(function (res) {
           setStatus(res.d && res.d.ok ? "Kicked " + res.d.removed + " session(s)." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
           load();
@@ -680,8 +680,8 @@
     }
 
     function removeKey(key) {
-      if (!confirm("Remove key '" + key + "'? This does not kick live sessions.")) return;
-      api("/api/admin/keys/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
+      if (!confirm("Remove code '" + key + "'? This does not kick live sessions.")) return;
+      api("/api/manage/keys/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
         .then(function (res) {
           setStatus(res.d && res.d.ok ? "Removed." : (res.d && res.d.error) || "Failed.", !(res.d && res.d.ok));
           load();
@@ -699,7 +699,7 @@
       var st = (k && k.settings) || { enabled: true, maxSessions: 0, maxDevices: 0, notes: "" };
       var expiresAt = st.expiresAt > Date.now() ? st.expiresAt : Date.now();
       expiresAt += days * 86400000;
-      api("/api/admin/keys/settings", {
+      api("/api/manage/keys/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: key, enabled: st.enabled !== false, maxSessions: st.maxSessions || 0, maxDevices: st.maxDevices || 0, notes: st.notes || "", expiresAt: expiresAt }),
@@ -733,7 +733,7 @@
 
     document.getElementById("btn-unlock").addEventListener("click", function () {
       adminKey = adminInput.value.trim();
-      if (!adminKey) { unlockErr.textContent = "Enter the admin key."; return; }
+      if (!adminKey) { unlockErr.textContent = "Enter the coordinator code."; return; }
       unlockErr.textContent = "";
       sessionStorage.setItem("arx_admin_key", adminKey);
       load();
@@ -755,12 +755,12 @@
     });
     document.getElementById("btn-add").addEventListener("click", function () {
       var key = newKeyInput.value.trim();
-      if (!key) { setStatus("Enter a key to add.", true); return; }
-      api("/api/admin/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
+      if (!key) { setStatus("Enter a code to add.", true); return; }
+      api("/api/manage/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
         .then(function (res) {
           if (res.d && res.d.ok) {
             newKeyInput.value = "";
-            setStatus("Key added.");
+            setStatus("Code added.");
             load();
           } else {
             setStatus((res.d && res.d.error) || "Failed.", true);

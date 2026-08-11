@@ -85,10 +85,10 @@
   <div class="card">
     <div class="mark">&pi;</div>
     <h1>Private practice portal</h1>
-    <p class="sub">This site is for approved users only. Enter your access key to continue.</p>
+    <p class="sub">This site is for approved users only. Enter your access code to continue.</p>
     <form id="login-form" autocomplete="off">
-      <label for="key">Access key</label>
-      <input type="password" id="key" placeholder="Enter your key" autocomplete="off" spellcheck="false" />
+      <label for="key">Access code</label>
+      <input type="password" id="key" placeholder="Enter your code" autocomplete="off" spellcheck="false" />
       <button type="submit" id="go">Sign in</button>
       <p class="err" id="err"></p>
     </form>
@@ -103,11 +103,11 @@
     function go() {
       // CDN-proof handoff: bunny.net ignores query strings when caching, so a
       // `?auth=` URL can get served a stale cached copy. The token goes in the
-      // PATH instead (/auth/<token>) so the URL is unique and never cached.
+      // PATH instead (/goto/<token>) so the URL is unique and never cached.
       // That route sets the session cookie and redirects to `next`.
-      var t = sessionStorage.getItem("arx_token") || "";
+      var t = sessionStorage.getItem("ml_token") || "";
       if (t) {
-        location.href = "/auth/" + encodeURIComponent(t) + "?next=" + encodeURIComponent(next);
+        location.href = "/goto/" + encodeURIComponent(t) + "?next=" + encodeURIComponent(next);
       } else {
         location.href = next;
       }
@@ -119,7 +119,7 @@
     function setCookie(token) {
       try {
         document.cookie =
-          "arx_session=" + encodeURIComponent(token) +
+          "ml_session=" + encodeURIComponent(token) +
           "; Path=/; SameSite=Lax; Max-Age=43200";
       } catch (e) {}
     }
@@ -175,7 +175,7 @@
       var key = document.getElementById("key").value.trim();
       var err = document.getElementById("err");
       var btn = document.getElementById("go");
-      if (!key) { err.textContent = "Enter your access key."; return; }
+      if (!key) { err.textContent = "Enter your access code."; return; }
       err.textContent = "";
       btn.disabled = true;
       fetch("/api/login", {
@@ -186,12 +186,12 @@
         .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
         .then(function (res) {
           if (res.status === 200 && res.d && res.d.ok) {
-            try { sessionStorage.setItem("arx_token", res.d.token); } catch (e) {}
+            try { sessionStorage.setItem("ml_token", res.d.token); } catch (e) {}
             setCookie(res.d.token);
             go();
             return;
           }
-          err.textContent = (res.d && res.d.error) || "Invalid access key.";
+          err.textContent = (res.d && res.d.error) || "Invalid access code.";
           btn.disabled = false;
           document.getElementById("key").value = "";
           document.getElementById("key").focus();

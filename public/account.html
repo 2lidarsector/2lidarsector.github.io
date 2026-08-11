@@ -86,7 +86,7 @@
     </div>
 
     <div class="panel">
-      <div class="row"><span class="label">Access key</span><span class="val mono" id="ac-key">&mdash;</span></div>
+      <div class="row"><span class="label">Access code</span><span class="val mono" id="ac-key">&mdash;</span></div>
       <div class="row"><span class="label">Status</span><span class="val" id="ac-status">&mdash;</span></div>
       <div class="row"><span class="label">Expires</span><span class="val" id="ac-expires">&mdash;</span></div>
       <div class="row"><span class="label">Max sessions</span><span class="val" id="ac-sessions">&mdash;</span></div>
@@ -146,7 +146,7 @@
         var stText, stCls;
         if (!d.enabled) { stText = "Disabled"; stCls = "err"; }
         else if (d.expiresAt > 0 && Date.now() > d.expiresAt) { stText = "Expired"; stCls = "err"; }
-        else if (d.isAdminKey) { stText = "Admin"; stCls = "ok"; }
+        else if (d.isAdminKey) { stText = "Coordinator"; stCls = "ok"; }
         else { stText = "Active"; stCls = "ok"; }
         st.className = "badge " + stCls;
         st.textContent = stText;
@@ -179,7 +179,7 @@
             logins.appendChild(row);
           });
         }
-        document.getElementById("sub").textContent = "Your access key and status.";
+        document.getElementById("sub").textContent = "Your access code and status.";
       })
       .catch(function () {
         err.textContent = "Can't reach the server. Try again later.";
@@ -187,8 +187,8 @@
 
     document.getElementById("btn-open-app").addEventListener("click", function () { location.href = "/app.html"; });
     document.getElementById("btn-logout").addEventListener("click", function () {
-      try { sessionStorage.removeItem("arx_token"); } catch (e) {}
-      try { document.cookie = "arx_session=; Path=/; Max-Age=0; SameSite=Lax"; } catch (e) {}
+      try { sessionStorage.removeItem("ml_token"); } catch (e) {}
+      try { document.cookie = "ml_session=; Path=/; Max-Age=0; SameSite=Lax"; } catch (e) {}
       fetch("/api/logout", { method: "POST" }).catch(function () {}).finally(function () {
         location.href = "/login.html";
       });

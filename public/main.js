@@ -239,7 +239,7 @@ function esc(s) {
   }[c]));
 }
 
-const connection = new FrameCore.FrameCoreConnection("/lib/transport-worker.js");
+const connection = new FrameCore.FrameCoreConnection("/assets/transport-worker.js");
 const config = window.__ARXX_CONFIG__ || { bareServers: [], wsUrl: null };
 let uvFallback = false;
 
@@ -254,8 +254,8 @@ navigator.serviceWorker.addEventListener(
     ) {
       try {
         const port = uvFallback
-          ? new SharedWorker("/lib/transport-worker.js", "arcade-bus-worker").port
-          : new SharedWorker("/baremux/worker.js", "bare-mux-worker").port;
+          ? new SharedWorker("/assets/transport-worker.js", "arcade-bus-worker").port
+          : new SharedWorker("/modules/worker.js", "bare-mux-worker").port;
         event.data.port.postMessage(port, [port]);
       } catch (e) {}
     }
@@ -310,14 +310,14 @@ async function getTransport() {
   transportPromise = (async () => {
     const mode = settingsMode();
     const sameOriginWisp =
-      (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/stream/";
+      (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/practice/";
     const bareFallback = () => {
-      const bare = config.bareServers.length ? config.bareServers[0] : "/remote/";
-      return { path: "/lib/remote-client.mjs", args: [new URL(bare, location.href).toString()] };
+      const bare = config.bareServers.length ? config.bareServers[0] : "/study/";
+      return { path: "/assets/net-client.mjs", args: [new URL(bare, location.href).toString()] };
     };
     if (mode === "wisp") {
       if (await probeWisp(sameOriginWisp)) {
-        return { path: "/net/index.mjs", args: [{ wisp: sameOriginWisp }] };
+        return { path: "/lesson/index.mjs", args: [{ wisp: sameOriginWisp }] };
       }
       console.warn("[arxx] wisp unavailable on this host, falling back to bare");
       return bareFallback();
@@ -329,10 +329,10 @@ async function getTransport() {
       const custom = (window.ARX && ARX.settings ? ARX.settings.transportUrl() : "").trim();
       if (custom) {
         if (/^wss?:\/\//i.test(custom)) {
-          return { path: "/net/index.mjs", args: [{ wisp: custom }] };
+          return { path: "/lesson/index.mjs", args: [{ wisp: custom }] };
         }
         if (/^https?:\/\//i.test(custom)) {
-          return { path: "/lib/remote-client.mjs", args: [new URL(custom, location.href).toString()] };
+          return { path: "/assets/net-client.mjs", args: [new URL(custom, location.href).toString()] };
         }
       }
     }
@@ -342,12 +342,12 @@ async function getTransport() {
     } catch (e) {}
     if (hasBackend) {
       if (await probeWisp(sameOriginWisp)) {
-        return { path: "/net/index.mjs", args: [{ wisp: sameOriginWisp }] };
+        return { path: "/lesson/index.mjs", args: [{ wisp: sameOriginWisp }] };
       }
       return bareFallback();
     }
     if (config.wsUrl) {
-      return { path: "/net/index.mjs", args: [{ wisp: config.wsUrl }] };
+      return { path: "/lesson/index.mjs", args: [{ wisp: config.wsUrl }] };
     }
     return bareFallback();
   })();
@@ -369,9 +369,9 @@ async function ensureScramjet() {
       if (typeof $scramjetLoadController !== "function") {
         await new Promise((resolve, reject) => {
           const s = document.createElement("script");
-          s.src = "/scram/scramjet.all.js";
+          s.src = "/resources/worker.all.js";
           s.onload = resolve;
-          s.onerror = () => reject(new Error("Failed to load scramjet client"));
+          s.onerror = () => reject(new Error("Failed to load secure client"));
           document.head.appendChild(s);
         });
       }
@@ -379,9 +379,9 @@ async function ensureScramjet() {
       const { ScramjetController } = $scramjetLoadController();
       const controller = new ScramjetController({
         files: {
-          wasm: "/scram/scramjet.wasm.wasm",
-          all: "/scram/scramjet.all.js",
-          sync: "/scram/scramjet.sync.js",
+          wasm: "/resources/worker.wasm",
+          all: "/resources/worker.all.js",
+          sync: "/resources/worker.sync.js",
         },
       });
       await controller.init();
@@ -430,9 +430,9 @@ let baremuxReady = null;
 async function ensureBareMux() {
   if (!baremuxReady) {
     baremuxReady = (async () => {
-      localStorage.setItem("bare-mux-path", "/baremux/worker.js");
-      const mod = await import("/baremux/index.mjs");
-      const baremux = new mod.BareMuxConnection("/baremux/worker.js");
+      localStorage.setItem("bare-mux-path", "/modules/worker.js");
+      const mod = await import("/modules/index.mjs");
+      const baremux = new mod.BareMuxConnection("/modules/worker.js");
       const t = await getTransport();
       if ((await baremux.getTransport()) !== t.path) {
         await baremux.setTransport(t.path, t.args);
@@ -482,7 +482,7 @@ if (window.ARX && ARX.settings) {
 let currentEngine = navEngine.value;
 let lastUrl = "";
 
-// ---- proxy ----
+// ---- routing ----
 
 async function proxify(url) {
   if (/^(blob|data|about|javascript|file):/i.test(url)) return url;
@@ -559,7 +559,7 @@ function decodeUrlForDisplay(href) {
   try {
     const u = new URL(href);
     if (u.origin !== location.origin) return href;
-    if (u.pathname.indexOf("/scramjet/") === 0) {
+    if (u.pathname.indexOf("/secure/") === 0) {
       try {
         return window.__scramjetController.decodeUrl(u.pathname + u.search);
       } catch (e) {}
@@ -784,7 +784,7 @@ function newTab() {
 
 function openIncognito() {
   const home = engineHome();
-  openTab(home, home + " (Incognito)", { proxy: true, incognito: true });
+  openTab(home, home + " (Private)", { proxy: true, incognito: true });
 }
 
 function fullscreenTab(id) {
@@ -1387,8 +1387,8 @@ async function refreshTransportHealth() {
   const el = document.getElementById("transport-health");
   if (!el) return;
   const sameOriginWisp =
-    (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/stream/";
-  const bareUrl = (config.bareServers.length ? config.bareServers[0] : "/remote/");
+    (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/practice/";
+  const bareUrl = (config.bareServers.length ? config.bareServers[0] : "/study/");
   el.innerHTML = '<div class="health-row"><span class="health-dot spin"></span><span class="health-name">Probing...</span></div>';
   const results = {};
   results["Backend (same-origin)"] = await measureLatency(async () => {
@@ -1396,16 +1396,16 @@ async function refreshTransportHealth() {
     return r.ok;
   });
   if (results["Backend (same-origin)"].ok) {
-    results["Wisp /stream/"] = await probeWispHealth(sameOriginWisp);
-    results["Bare /remote/"] = await measureLatency(async () => {
+    results["Fast channel"] = await probeWispHealth(sameOriginWisp);
+    results["Standard channel"] = await measureLatency(async () => {
       const r = await fetch(new URL(bareUrl, location.href), { method: "HEAD", cache: "no-store" });
       return true;
     });
   }
   const mode = settingsMode();
   let note = "";
-  if (mode === "scramjet") note = '<div class="health-note">Scramjet mode: proxy handled by service worker.</div>';
-  else if (mode === "custom") note = '<div class="health-note">Custom transport URL configured.</div>';
+  if (mode === "scramjet") note = '<div class="health-note">Secure mode: traffic handled locally by the service worker.</div>';
+  else if (mode === "custom") note = '<div class="health-note">Custom server address configured.</div>';
   el.innerHTML =
     Object.entries(results)
       .map(([k, v]) => healthRow(k, v))
@@ -1437,14 +1437,14 @@ if (clockEl) {
 // ---- what's new ----
 
 const CHANGELOG = [
-  "Favorites row: star any game to pin it to the top of the home page.",
-  "Per-game tab disguise: choose a cloak per game via its menu icon.",
+  "Favorites row: star any app to pin it to the top of the home page.",
+  "Per-app page label: pick a label per app via its menu icon.",
   "Session restore: reopen your tabs after a refresh (Settings toggle).",
   "Add any open page to your library from the toolbar.",
   "Immersive focus mode: hide every part of the UI and just play.",
-  "Camouflage mode: wrap games in a fake Google Doc (Settings).",
-  "Custom cloaks: set your own tab title + icon.",
-  "Transport health dashboard in Settings.",
+  "Document view: wrap apps in a clean document layout (Settings).",
+  "Custom page labels: set your own title + icon.",
+  "Network health dashboard in Settings.",
   "Recently played row on home.",
   "Browser-style tabs: pin with right-click.",
 ];

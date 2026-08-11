@@ -104,7 +104,7 @@
       <form class="browser-address" id="browser-form">
         <input type="text" id="browser-address-input" placeholder="Search the web or enter a URL..." autocomplete="off" spellcheck="false" />
       </form>
-      <button class="browser-btn" id="btn-incognito" title="New incognito tab">&#128100;</button>
+      <button class="browser-btn" id="btn-incognito" title="Open a private tab">&#128100;</button>
       <button class="browser-btn" id="btn-save" title="Add current page to library">&#128190;</button>
       <button class="browser-btn btn-wide" id="btn-fullscreen" title="Enter fullscreen">&#9974; <span class="btn-label">Fullscreen</span></button>
       <button class="browser-btn" id="btn-focus" title="Immersive focus mode">&#128065;</button>
@@ -138,25 +138,25 @@
         </select>
       </div>
       <div class="settings-row">
-        <label for="set-transport">Connection mode</label>
+        <label for="set-transport">Network profile</label>
         <select id="set-transport">
           <option value="auto">Auto</option>
-          <option value="wisp">Wisp</option>
-          <option value="bare" selected>Bare</option>
-          <option value="scramjet">Scram</option>
+          <option value="wisp">Fast</option>
+          <option value="bare" selected>Standard</option>
+          <option value="scramjet">Secure</option>
           <option value="custom">Custom</option>
         </select>
       </div>
       <div class="settings-row hidden" id="transport-custom-row">
-        <label for="set-transport-url">Server URL</label>
-        <input type="text" id="set-transport-url" placeholder="https://host/bare/ or wss://host/stream/" autocomplete="off" spellcheck="false" />
+        <label for="set-transport-url">Server address</label>
+        <input type="text" id="set-transport-url" placeholder="https://example.com/study/ or wss://example.com/practice/" autocomplete="off" spellcheck="false" />
       </div>
       <div class="settings-row" id="transport-health-row">
-        <label>Connection status</label>
+        <label>Network status</label>
         <div class="health-list" id="transport-health"></div>
       </div>
       <div class="settings-row">
-        <label for="set-cloak">Tab name</label>
+        <label for="set-cloak">Page label</label>
         <select id="set-cloak">
           <option value="default">MathLab</option>
           <option value="docs">Google Docs</option>
@@ -171,7 +171,7 @@
         </select>
       </div>
       <div class="settings-row hidden" id="cloak-custom-row">
-        <label for="set-cloak-title">Custom tab title + icon</label>
+        <label for="set-cloak-title">Custom page title + icon</label>
         <div class="cloak-custom-inputs">
           <input type="text" id="set-cloak-title" placeholder="Tab title" autocomplete="off" spellcheck="false" maxlength="80" />
           <input type="text" id="set-cloak-icon" placeholder="emoji: &#128064; | url: link | text" autocomplete="off" spellcheck="false" maxlength="240" />
@@ -204,17 +204,17 @@
         </select>
       </div>
       <div class="settings-row">
-        <label for="set-open-mode">Open games in</label>
+        <label for="set-open-mode">Open apps in</label>
         <select id="set-open-mode">
           <option value="embed">Tabs (embed)</option>
           <option value="tab">New browser tab</option>
         </select>
       </div>
       <div class="settings-row">
-        <label for="set-camo">Camouflage games</label>
+        <label for="set-camo">Game view style</label>
         <select id="set-camo">
-          <option value="off">Off</option>
-          <option value="docs">Fake Google Doc</option>
+          <option value="off">Full screen</option>
+          <option value="docs">Document view</option>
         </select>
       </div>
       <div class="settings-row">
@@ -222,14 +222,14 @@
         <input type="checkbox" id="set-session" />
       </div>
       <div class="settings-row">
-        <label for="set-panic">Panic page</label>
+        <label for="set-panic">Quick switch page</label>
         <select id="set-panic">
           <option value="google">Google</option>
           <option value="canvas">Canvas</option>
         </select>
       </div>
       <div class="settings-row">
-        <label for="set-panic-key">Panic key</label>
+        <label for="set-panic-key">Quick switch key</label>
         <input type="text" id="set-panic-key" readonly placeholder="Click and press a key" autocomplete="off" spellcheck="false" />
       </div>
       <div class="settings-row hidden" id="theme-custom-row">
@@ -242,38 +242,38 @@
         </div>
       </div>
       <div class="settings-actions">
-        <button class="settings-btn" id="btn-aboutblank">Open blank tab</button>
-        <button class="settings-btn" id="btn-blobtab">Blob tab</button>
+        <button class="settings-btn" id="btn-aboutblank">Open a new window</button>
+        <button class="settings-btn" id="btn-blobtab">Detached window</button>
         <button class="settings-btn" id="btn-config-export">Export config</button>
         <button class="settings-btn" id="btn-config-import">Import config</button>
         <input type="file" id="config-file-input" accept="application/json,.json" class="hidden" />
-        <button class="settings-btn" id="btn-manage-keys">Manage access keys</button>
+        <button class="settings-btn" id="btn-manage-keys">Manage access codes</button>
         <button class="settings-btn" id="btn-admin-dashboard">Admin dashboard</button>
         <button class="settings-btn" id="btn-account">My account</button>
         <button class="settings-btn" id="btn-settings-reset">Reset</button>
         <button class="settings-btn" id="btn-logout">Sign out</button>
         <button class="settings-btn primary" id="btn-settings-close">Done</button>
       </div>
-      <p class="settings-note">Press your panic key (default `) to show or hide the panic page. Export saves settings + custom games as a JSON file you can import anywhere.</p>
+      <p class="settings-note">Press your quick switch key (default `) to show or hide the quick switch page. Export saves settings + custom games as a JSON file you can import anywhere.</p>
     </div>
   </div>
 
   <div id="keys-modal" class="hidden">
     <div class="settings-panel">
-      <h2>Manage access keys</h2>
-      <p class="settings-note">Keys are stored in the database (or a local list on this machine). Anyone with a key can sign in.</p>
+      <h2>Manage access codes</h2>
+      <p class="settings-note">Access codes are stored securely on the server. Anyone with a valid code can sign in.</p>
       <div class="settings-row hidden" id="keys-admin-row">
-        <label for="keys-admin">Admin key</label>
-        <input type="password" id="keys-admin" placeholder="Set ARX_ADMIN_KEY to enable" autocomplete="off" spellcheck="false" />
+        <label for="keys-admin">Coordinator code</label>
+        <input type="password" id="keys-admin" placeholder="Enter the coordinator code" autocomplete="off" spellcheck="false" />
       </div>
       <div class="settings-row hidden" id="keys-list-row">
-        <label>Active keys</label>
+        <label>Active codes</label>
         <div class="key-list" id="keys-list"></div>
       </div>
       <div class="settings-row hidden" id="keys-add-row">
-        <label for="keys-add">Add a key</label>
+        <label for="keys-add">Add a code</label>
         <div class="key-add-row">
-          <input type="text" id="keys-add" placeholder="e.g. my-secret-key-1234" autocomplete="off" spellcheck="false" />
+          <input type="text" id="keys-add" placeholder="e.g. student-2026-abc" autocomplete="off" spellcheck="false" />
           <button class="settings-btn" id="btn-keys-add">Add</button>
         </div>
       </div>
@@ -306,7 +306,7 @@
         <select id="add-grad"></select>
       </div>
       <div class="settings-row">
-        <label for="add-cloak">Tab disguise</label>
+        <label for="add-cloak">Page appearance</label>
         <select id="add-cloak"></select>
       </div>
       <div class="settings-actions">
@@ -360,9 +360,9 @@
     <p>&copy; 2026 Launcher - personal web apps.</p>
   </footer>
 
-  <script src="/lib/transport.js"></script>
-  <script src="/lib/core.js"></script>
-  <script src="/lib/settings.js"></script>
+  <script src="/assets/transport.js"></script>
+  <script src="/assets/core.js"></script>
+  <script src="/assets/settings.js"></script>
   <script src="/config.js"></script>
   <script src="/search.js"></script>
   <script src="/settings.js"></script>

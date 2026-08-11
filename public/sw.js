@@ -1,8 +1,8 @@
 "use strict";
-importScripts('/lib/core.js');
-importScripts('/lib/settings.js');
-importScripts(self.__site$config.sw || '/lib/worker.js');
-importScripts('/scram/scramjet.all.js');
+importScripts('/assets/core.js');
+importScripts('/assets/settings.js');
+importScripts(self.__site$config.sw || '/assets/worker.js');
+importScripts('/resources/worker.all.js');
 
 const engine = new SiteWorker();
 
@@ -36,7 +36,7 @@ self.addEventListener('message', (event) => {
 
 async function handleRequest(event) {
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith('/scramjet/')) {
+  if (url.pathname.startsWith('/secure/')) {
     if (!scramjet) ensureScramjetWorker();
     if (scramjet) {
       try {
@@ -49,13 +49,13 @@ async function handleRequest(event) {
       try {
         return await scramjet.fetch(event);
       } catch (e) {
-        return new Response('Scramjet proxy failed to reach the requested site.', {
+        return new Response('Could not load the requested page.', {
           status: 502,
           headers: { 'content-type': 'text/plain' },
         });
       }
     }
-    return new Response('Scramjet proxy is not ready yet. Reload the page and try again.', {
+    return new Response('Service is not ready yet. Reload the page and try again.', {
       status: 503,
       headers: { 'content-type': 'text/plain' },
     });

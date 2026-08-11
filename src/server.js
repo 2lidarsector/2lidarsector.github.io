@@ -28,7 +28,7 @@ const publicPath = join(process.cwd(), "public");
 const keysPath = join(process.cwd(), "keys.txt");
 
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
-const COOKIE_NAME = "arx_session";
+const COOKIE_NAME = "ml_session";
 
 // ---------- access keys (never shipped to the browser) ----------
 
@@ -333,13 +333,13 @@ const ADMIN_KEY = (process.env.ARX_ADMIN_KEY || "").trim();
 
 function adminAuthed(req) {
   if (!ADMIN_KEY) return false;
-  const provided = (req.headers["x-admin-key"] || "").trim();
+  const provided = (req.headers["x-teacher-key"] || "").trim();
   return provided.length > 0 && safeEqual(ADMIN_KEY, provided);
 }
 
 function requireAdmin(req, res, next) {
-  if (!ADMIN_KEY) return res.status(404).json({ error: "admin api disabled" });
-  if (!adminAuthed(req)) return res.status(403).json({ error: "invalid admin key" });
+  if (!ADMIN_KEY) return res.status(404).json({ error: "management api disabled" });
+  if (!adminAuthed(req)) return res.status(403).json({ error: "invalid coordinator code" });
   next();
 }
 
@@ -358,9 +358,9 @@ app.use((req, res, next) => {
   const p = req.path;
   if (
     p.startsWith("/api/") ||
-    p.startsWith("/remote/") ||
-    p.startsWith("/stream/") ||
-    p.startsWith("/net/") ||
+    p.startsWith("/study/") ||
+    p.startsWith("/practice/") ||
+    p.startsWith("/lesson/") ||
     p.startsWith("/__status__")
   ) {
     res.setHeader("Cache-Control", NO_STORE);
@@ -395,7 +395,7 @@ app.get("/api/auth", (req, res) => {
 // page then JS-redirects to the clean destination with the session cookie in
 // place. Requests to the destination then carry the cookie, so a CDN configured
 // with "bypass cache on cookie" (or no-store) serves the real app page.
-app.get("/auth/:token", (req, res) => {
+app.get("/goto/:token", (req, res) => {
   const t = req.params.token || "";
   const payload = parseToken(t);
   if (!payload) {
@@ -427,13 +427,13 @@ app.post("/api/login", async (req, res) => {
 
     const settings = await getKeySettings(key);
     if (!settings.enabled) {
-      res.status(403).json({ ok: false, error: "This key is disabled." });
+      res.status(403).json({ ok: false, error: "This code is disabled." });
       return;
     }
     if (settings.expiresAt > 0 && Date.now() > settings.expiresAt) {
       res.status(403).json({
         ok: false,
-        error: "This key has expired. Contact the owner for a new key.",
+        error: "This code has expired. Contact the owner for a new one.",
       });
       return;
     }
@@ -443,7 +443,7 @@ app.post("/api/login", async (req, res) => {
       if (settings.maxSessions > 0 && active.length >= settings.maxSessions) {
         res.status(403).json({
           ok: false,
-          error: `Max ${settings.maxSessions} concurrent session(s) reached for this key.`,
+          error: `Max ${settings.maxSessions} concurrent session(s) reached for this code.`,
         });
         return;
       }
@@ -452,7 +452,7 @@ app.post("/api/login", async (req, res) => {
         if (!devices.has(device) && devices.size >= settings.maxDevices) {
           res.status(403).json({
             ok: false,
-            error: `Max ${settings.maxDevices} device(s) allowed for this key.`,
+            error: `Max ${settings.maxDevices} device(s) allowed for this code.`,
           });
           return;
         }
@@ -467,7 +467,7 @@ app.post("/api/login", async (req, res) => {
     res.json({ ok: true, token });
   } else {
     recordFail(ip);
-    res.status(401).json({ ok: false, error: "Invalid access key" });
+    res.status(401).json({ ok: false, error: "Invalid access code" });
   }
 });
 
@@ -479,7 +479,7 @@ app.post("/api/logout", (req, res) => {
 });
 
 // Admin API: list / add / remove access keys in the database.
-app.get("/api/admin/keys", requireAdmin, async (req, res) => {
+app.get("/api/manage/keys", requireAdmin, async (req, res) => {
   try {
     if (store.dbConfigured()) {
       const rows = await store.listKeys();
@@ -494,10 +494,10 @@ app.get("/api/admin/keys", requireAdmin, async (req, res) => {
   }
 });
 
-app.post("/api/admin/keys", requireAdmin, async (req, res) => {
+app.post("/api/manage/keys", requireAdmin, async (req, res) => {
   const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
   if (key.length < 4 || key.length > 255) {
-    res.status(400).json({ error: "Key must be between 4 and 255 characters" });
+    res.status(400).json({ error: "Code must be between 4 and 255 characters" });
     return;
   }
   try {
@@ -506,15 +506,15 @@ app.post("/api/admin/keys", requireAdmin, async (req, res) => {
     } else {
       loadLocalKeys();
       if (localKeys.some((k) => safeEqual(k, key))) {
-        return res.status(409).json({ error: "Key already exists" });
+        return res.status(409).json({ error: "Code already exists" });
       }
       localKeys.push(key);
     }
-    await audit("add_key", "admin", key, "Key added");
+    await audit("add_key", "admin", key, "Code added");
     res.json({ ok: true });
   } catch (e) {
     if (e && e.code === "ER_DUP_ENTRY") {
-      res.status(409).json({ error: "Key already exists" });
+      res.status(409).json({ error: "Code already exists" });
       return;
     }
     console.error("[admin] add key failed", e);
@@ -522,7 +522,7 @@ app.post("/api/admin/keys", requireAdmin, async (req, res) => {
   }
 });
 
-app.delete("/api/admin/keys/:id", requireAdmin, async (req, res) => {
+app.delete("/api/manage/keys/:id", requireAdmin, async (req, res) => {
   try {
     if (store.dbConfigured()) {
       await store.removeKey(req.params.id);
@@ -539,7 +539,7 @@ app.delete("/api/admin/keys/:id", requireAdmin, async (req, res) => {
 });
 
 // Remove a key by its value (used by the admin dashboard).
-app.post("/api/admin/keys/remove", requireAdmin, async (req, res) => {
+app.post("/api/manage/keys/remove", requireAdmin, async (req, res) => {
   const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
   if (!key) {
     res.status(400).json({ error: "Missing key" });
@@ -557,7 +557,7 @@ app.post("/api/admin/keys/remove", requireAdmin, async (req, res) => {
         saveKeySettingsFile(all);
       }
     }
-    await audit("remove_key", "admin", key, "Key removed");
+    await audit("remove_key", "admin", key, "Code removed");
     res.json({ ok: true });
   } catch (e) {
     console.error("[admin] remove key by value failed", e);
@@ -629,7 +629,7 @@ async function summarize() {
   return { active, keys };
 }
 
-app.get("/api/admin/overview", requireAdmin, async (req, res) => {
+app.get("/api/manage/overview", requireAdmin, async (req, res) => {
   try {
     const sum = await summarize();
     let dbOk = false;
@@ -660,7 +660,7 @@ app.get("/api/admin/overview", requireAdmin, async (req, res) => {
 });
 
 // Kick all sessions that used a given key (force re-login).
-app.post("/api/admin/kick", requireAdmin, async (req, res) => {
+app.post("/api/manage/kick", requireAdmin, async (req, res) => {
   const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
   let removed = 0;
   for (const [token, s] of sessions) {
@@ -674,10 +674,10 @@ app.post("/api/admin/kick", requireAdmin, async (req, res) => {
 });
 
 // Update per-key settings (enabled, max sessions, max devices, notes, expiry).
-app.post("/api/admin/keys/settings", requireAdmin, async (req, res) => {
+app.post("/api/manage/keys/settings", requireAdmin, async (req, res) => {
   const key = req.body && typeof req.body.key === "string" ? req.body.key.trim() : "";
   if (!key) {
-    res.status(400).json({ error: "Missing key" });
+    res.status(400).json({ error: "Missing code" });
     return;
   }
   const body = req.body || {};
@@ -700,11 +700,11 @@ app.post("/api/admin/keys/settings", requireAdmin, async (req, res) => {
 });
 
 // Bulk actions: kick / disable / remove several keys at once.
-app.post("/api/admin/keys/bulk", requireAdmin, async (req, res) => {
+app.post("/api/manage/keys/bulk", requireAdmin, async (req, res) => {
   const body = req.body || {};
   const keys = Array.isArray(body.keys) ? body.keys.map((k) => String(k).trim()).filter(Boolean) : [];
   if (!keys.length) {
-    res.status(400).json({ error: "No keys selected" });
+    res.status(400).json({ error: "No codes selected" });
     return;
   }
   const action = body.action;
@@ -747,12 +747,12 @@ app.post("/api/admin/keys/bulk", requireAdmin, async (req, res) => {
       }
     }
   }
-  await audit("bulk_" + action, "admin", "", `${keys.length} key(s)`);
+  await audit("bulk_" + action, "admin", "", `${keys.length} code(s)`);
   res.json({ ok: true, affected: keys.length, removed });
 });
 
 // Audit log: who changed what, when.
-app.get("/api/admin/audit", requireAdmin, async (req, res) => {
+app.get("/api/manage/audit", requireAdmin, async (req, res) => {
   try {
     const rows = await auditHistory(200);
     res.json({ ok: true, entries: rows });
@@ -826,7 +826,7 @@ app.get("/__status__", (req, res) => {
 // Load our publicPath first and prioritize it over other assets.
 app.use(express.static(publicPath));
 // Transport client is backend-only (served from node_modules, never on Pages).
-app.use("/net/", express.static(epoxyPath));
+app.use("/lesson/", express.static(epoxyPath));
 
 // Error for everything else
 app.use((req, res) => {
@@ -834,14 +834,12 @@ app.use((req, res) => {
   res.sendFile(join(publicPath, "404.html"));
 });
 
-const bare = createBareServer("/remote/", {
+const bare = createBareServer("/study/", {
   connectionLimiter: { maxConnectionsPerIP: 100000, windowDuration: 1 },
 });
 const server = createServer();
 
 server.on("request", (req, res) => {
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
   if (bare.shouldRoute(req)) {
     if (!authed(req)) {
       res.writeHead(401, { "Content-Type": "text/plain" });
@@ -862,7 +860,7 @@ server.on("upgrade", (req, socket, head) => {
     bare.routeUpgrade(req, socket, head);
     return;
   }
-  if (req.url.endsWith("/stream/")) {
+  if (req.url.endsWith("/practice/")) {
     if (!authed(req)) {
       socket.end();
       return;

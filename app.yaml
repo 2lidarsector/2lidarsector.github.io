@@ -1,5 +1,5 @@
 kind: wasmer.io/App.v0
 owner: 2lidarsector
 name: arcadex
-description: ArcadeX - web proxy with app library
+description: ArcadeX - web apps and study tools
 package: 2lidarsector/arcadex

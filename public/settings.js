@@ -628,9 +628,9 @@ window.ARX = window.ARX || {};
     // Clear client-side session state too: a CDN (bunny.net) may drop the
     // server's Set-Cookie on the logout response, so rely on JS to wipe the
     // cookie and token that the login page uses to auto-restore a session.
-    try { sessionStorage.removeItem("arx_token"); } catch (e) {}
+    try { sessionStorage.removeItem("ml_token"); } catch (e) {}
     try {
-      document.cookie = "arx_session=; Path=/; Max-Age=0; SameSite=Lax";
+      document.cookie = "ml_session=; Path=/; Max-Age=0; SameSite=Lax";
     } catch (e) {}
     fetch("/api/logout", { method: "POST" })
       .catch(function () {})
@@ -639,7 +639,7 @@ window.ARX = window.ARX || {};
       });
   });
 
-  // ---------- admin: manage access keys ----------
+  // ---------- coordinator: manage access codes ----------
 
   var manageKeysBtn = document.getElementById("btn-manage-keys");
   var keysModal = document.getElementById("keys-modal");
@@ -677,7 +677,7 @@ window.ARX = window.ARX || {};
     if (!keysList) return;
     keysList.innerHTML = "";
     if (!keysCache.length) {
-      keysList.textContent = "No keys yet.";
+      keysList.textContent = "No codes yet.";
       return;
     }
     keysCache.forEach(function (k) {
@@ -691,18 +691,18 @@ window.ARX = window.ARX || {};
       del.className = "key-list-del";
       del.textContent = "Remove";
       del.addEventListener("click", function () {
-        fetch("/api/admin/keys/" + encodeURIComponent(k.id), {
+        fetch("/api/manage/keys/" + encodeURIComponent(k.id), {
           method: "DELETE",
-          headers: { "x-admin-key": storedAdminKey },
+          headers: { "x-teacher-key": storedAdminKey },
         })
           .then(function (r) { return r.json(); })
           .then(function (d) {
             if (d.ok) {
               keysCache = keysCache.filter(function (x) { return x.id !== k.id; });
               renderKeys();
-              setKeysStatus("Key removed.");
+              setKeysStatus("Code removed.");
             } else {
-              setKeysStatus(d.error || "Failed to remove key.", true);
+              setKeysStatus(d.error || "Failed to remove code.", true);
             }
           })
           .catch(function () { setKeysStatus("Network error.", true); });
@@ -725,19 +725,19 @@ window.ARX = window.ARX || {};
 
   function loadKeys() {
     if (!keysUnlocked()) {
-      setKeysStatus("Enter the admin key first.", true);
+      setKeysStatus("Enter the coordinator code first.", true);
       return;
     }
-    fetch("/api/admin/keys", { headers: { "x-admin-key": storedAdminKey } })
+    fetch("/api/manage/keys", { headers: { "x-teacher-key": storedAdminKey } })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.ok) {
           keysCache = d.keys || [];
           renderKeys();
-          setKeysStatus(keysCache.length + " key(s).");
+          setKeysStatus(keysCache.length + " code(s).");
         } else {
           storedAdminKey = "";
-          setKeysStatus(d.error || "Invalid admin key.", true);
+          setKeysStatus(d.error || "Invalid coordinator code.", true);
           showKeysPanel();
         }
       })
@@ -758,7 +758,7 @@ window.ARX = window.ARX || {};
   if (keysUnlockBtn) keysUnlockBtn.addEventListener("click", function () {
     storedAdminKey = (keysAdminInput ? keysAdminInput.value : "").trim();
     if (!storedAdminKey) {
-      setKeysStatus("Enter the admin key.", true);
+      setKeysStatus("Enter the coordinator code.", true);
       return;
     }
     loadKeys();
@@ -774,12 +774,12 @@ window.ARX = window.ARX || {};
   if (keysAddBtn) keysAddBtn.addEventListener("click", function () {
     var key = (keysAddInput ? keysAddInput.value : "").trim();
     if (!key) {
-      setKeysStatus("Enter a key to add.", true);
+      setKeysStatus("Enter a code to add.", true);
       return;
     }
-    fetch("/api/admin/keys", {
+    fetch("/api/manage/keys", {
       method: "POST",
-      headers: { "x-admin-key": storedAdminKey, "Content-Type": "application/json" },
+      headers: { "x-teacher-key": storedAdminKey, "Content-Type": "application/json" },
       body: JSON.stringify({ key: key }),
     })
       .then(function (r) { return r.json(); })
@@ -787,9 +787,9 @@ window.ARX = window.ARX || {};
         if (d.ok) {
           if (keysAddInput) keysAddInput.value = "";
           loadKeys();
-          setKeysStatus("Key added.");
+          setKeysStatus("Code added.");
         } else {
-          setKeysStatus(d.error || "Failed to add key.", true);
+          setKeysStatus(d.error || "Failed to add code.", true);
         }
       })
       .catch(function () { setKeysStatus("Network error.", true); });
