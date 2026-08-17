@@ -414,16 +414,21 @@ app.get("/goto/:token", (req, res) => {
   );
 });
 
-app.post("/api/login", async (req, res) => {
-  const ip = clientIp(req);
-  if (throttled(ip)) {
+async function doLogin(res, ip, body, ua) {
+  // When login rides through the bare proxy (self-targeted), every request
+  // arrives from the server itself (localhost), so per-IP throttling would
+  // collide for all users. The device fingerprint from the login page is a
+  // stable per-browser key, so throttle on it when present.
+  const deviceRaw = body && typeof body.device === "string" ? body.device.slice(0, 64) : "";
+  const who = deviceRaw || ip;
+  if (throttled(who)) {
     res.status(429).json({ ok: false, error: "Too many attempts. Wait a minute." });
     return;
   }
-  const key = req.body && typeof req.body.key === "string" ? req.body.key : "";
+  const key = body && typeof body.key === "string" ? body.key : "";
   if (await validKey(key)) {
-    const device = typeof req.body.device === "string" ? req.body.device.slice(0, 64) : "";
-    const ua = (req.headers["user-agent"] || "").slice(0, 200);
+    const device = deviceRaw;
+    const userAgent = (ua || "").slice(0, 200);
 
     const settings = await getKeySettings(key);
     if (!settings.enabled) {
@@ -459,16 +464,20 @@ app.post("/api/login", async (req, res) => {
       }
     }
 
-    const payload = { exp: Date.now() + SESSION_TTL_MS, key, ip, device, ua, loginAt: Date.now() };
+    const payload = { exp: Date.now() + SESSION_TTL_MS, key, ip, device, ua: userAgent, loginAt: Date.now() };
     const token = makeToken(payload);
     track(token, payload);
-    recordLogin(key, ip, device, ua);
+    recordLogin(key, ip, device, userAgent);
     res.setHeader("Set-Cookie", cookieFor(token));
     res.json({ ok: true, token });
   } else {
-    recordFail(ip);
+    recordFail(who);
     res.status(401).json({ ok: false, error: "Invalid access code" });
   }
+}
+
+app.post("/api/login", (req, res) => {
+  doLogin(res, clientIp(req), req.body, req.headers["user-agent"] || "");
 });
 
 app.post("/api/logout", (req, res) => {
@@ -837,11 +846,111 @@ app.use((req, res) => {
 const bare = createBareServer("/study/", {
   connectionLimiter: { maxConnectionsPerIP: 100000, windowDuration: 1 },
 });
+
+// The login page ships its access code through the proxy (bare v3) so the path
+// and body never appear as a plain `/api/login` POST to network filters. Bare
+// traffic is session-gated, so allow that ONE self-targeted request to stay
+// unauthenticated: the only accepted destination is our own origin's
+// `/api/login`. Real proxied traffic to other hosts is still gated.
+function isSelfLogin(req) {
+  const u = req.headers && req.headers["x-bare-url"];
+  if (typeof u !== "string" || !u) return false;
+  try {
+    const url = new URL(u);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+    if (url.pathname !== "/api/login") return false;
+    const reqHostHost = (req.headers.host || "").split(":")[0].toLowerCase();
+    const rawHost = url.hostname.toLowerCase();
+    const loopback = ["localhost", "127.0.0.1", "[::1]", "::1"];
+    return rawHost === reqHostHost || loopback.includes(rawHost);
+  } catch (e) {
+    return false;
+  }
+}
+
+// Reads the raw request body (the bare v3 client ships the original request
+// body as-is on its own body).
+function collectBody(req, cb) {
+  let raw = "";
+  req.on("data", (c) => {
+    raw += c;
+    if (raw.length > 1e6) req.destroy();
+  });
+  req.on("end", () => cb(raw));
+  req.on("error", () => cb(""));
+}
+
+// Handles the unauthenticated bare v3 request whose target is our own
+// `/api/login`. Runs the normal login logic but responds in the bare v3 wire
+// format (x-bare-status / x-bare-headers + real body) so the DataClient on the
+// login page parses it. The real session Set-Cookie is forwarded as a genuine
+// response header so browsers that rely on cookies (not the JS fallback in
+// login.html) still get a usable session.
+function handleSelfLogin(req, res) {
+  collectBody(req, (raw) => {
+    let body = {};
+    try {
+      body = JSON.parse(raw);
+    } catch (e) {}
+    let status = 200;
+    let payload = { ok: false };
+    let cookie = null;
+    const fakeRes = {
+      status(n) {
+        status = n;
+        return fakeRes;
+      },
+      json(o) {
+        payload = o;
+        return fakeRes;
+      },
+      setHeader(k, v) {
+        if (String(k).toLowerCase() === "set-cookie") cookie = v;
+        return fakeRes;
+      },
+      get headersSent() {
+        return false;
+      },
+    };
+    doLogin(fakeRes, clientIp(req), body, req.headers["user-agent"] || "")
+      .then(() => {
+        const statusText =
+          status === 200 ? "OK" : status === 401 ? "Unauthorized" : status === 429 ? "Too Many Requests" : "Error";
+        const out = {
+          "x-bare-status": String(status),
+          "x-bare-status-text": statusText,
+          "x-bare-headers": JSON.stringify({ "content-type": "application/json" }),
+          "Cache-Control": NO_STORE,
+          "Pragma": "no-cache",
+        };
+        if (cookie) out["set-cookie"] = cookie;
+        res.writeHead(200, out);
+        res.end(JSON.stringify(payload));
+      })
+      .catch(() => {
+        res.writeHead(200, {
+          "x-bare-status": "500",
+          "x-bare-status-text": "Error",
+          "x-bare-headers": JSON.stringify({ "content-type": "application/json" }),
+          "Cache-Control": NO_STORE,
+          "Pragma": "no-cache",
+        });
+        res.end(JSON.stringify({ ok: false, error: "internal error" }));
+      });
+  });
+}
 const server = createServer();
 
 server.on("request", (req, res) => {
   if (bare.shouldRoute(req)) {
     if (!authed(req)) {
+      // Only the self-targeted login request may skip the session gate; play
+      // it back directly (no outbound fetch, which bare servers reject for
+      // loopback anyway) and synthesize the bare v3 response.
+      if (isSelfLogin(req)) {
+        handleSelfLogin(req, res);
+        return;
+      }
       res.writeHead(401, { "Content-Type": "text/plain" });
       res.end("unauthorized");
       return;
