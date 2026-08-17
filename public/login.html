@@ -169,6 +169,39 @@
         document.getElementById("go").disabled = false;
       });
 
+    // Send the access code through the same bare proxy the app uses, so the
+    // request never appears as a plain `POST /api/login` with the code in the
+    // body — to a network filter it's just another encoded `/study/` request.
+    // The server whitelists this single self-targeted bare request.
+    function sendLogin(key, device) {
+      var payload = JSON.stringify({ key: key, device: device });
+      return import("/assets/net-client.mjs")
+        .then(function (mod) {
+          var client = new mod.default(new URL("/study/", location.origin).toString());
+          var remote = new URL("/api/login", location.origin);
+          return client
+            .request(remote, "POST", payload, { "content-type": "application/json" })
+            .then(function (res) {
+              return new Response(res.body).text().then(function (text) {
+                var d = {};
+                try { d = JSON.parse(text); } catch (e) {}
+                return { status: res.status, d: d };
+              });
+            });
+        })
+        .catch(function () {
+          // No bare backend on this host (e.g. a static mirror): fall back to
+          // a direct request so login still works when nothing is blocking it.
+          return fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+          }).then(function (r) {
+            return r.json().then(function (d) { return { status: r.status, d: d }; });
+          });
+        });
+    }
+
     document.getElementById("go").disabled = true;
     document.getElementById("login-form").addEventListener("submit", function (e) {
       e.preventDefault();
@@ -178,12 +211,7 @@
       if (!key) { err.textContent = "Enter your access code."; return; }
       err.textContent = "";
       btn.disabled = true;
-      fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key, device: makeFingerprint() }),
-      })
-        .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+      sendLogin(key, makeFingerprint())
         .then(function (res) {
           if (res.status === 200 && res.d && res.d.ok) {
             try { sessionStorage.setItem("ml_token", res.d.token); } catch (e) {}
